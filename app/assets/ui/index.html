@@ -169,6 +169,19 @@ textarea#inp{border-radius:22px;padding:11px 16px;background:var(--panel2);borde
 .fab{position:fixed;right:16px;bottom:150px;width:42px;height:42px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);color:var(--text);
   display:none;place-items:center;font-size:18px;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.35)}
 .fab.on{display:grid;animation:rise .2s ease-out both}
+.prog{height:4px;border-radius:4px;background:var(--panel2);overflow:hidden;margin-top:10px}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+.fitem{display:flex;gap:12px;align-items:flex-start;padding:12px;margin-bottom:8px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--panel) 90%,transparent)}
+.fitem .ic{flex:none;width:44px;height:44px;border-radius:10px;background:var(--panel2);display:grid;place-items:center;font-size:22px;overflow:hidden}
+.fitem .ic img{width:100%;height:100%;object-fit:cover}
+.fitem .grow{flex:1;min-width:0}
+.fitem .nm{font-weight:600;overflow-wrap:anywhere}
+.fitem .meta{font-size:12.5px;color:var(--dim);margin:1px 0 4px}
+.fitem .sn{font-size:14px;color:var(--dim);overflow-wrap:anywhere}
+.fitem .del{flex:none;color:var(--dim);padding:6px;font-size:18px}
+.secgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+.secgrid button{text-align:left;padding:14px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--panel) 90%,transparent);color:var(--text)}
+.secgrid button b{display:block;font-size:15px}.secgrid button span{font-size:13px;color:var(--dim)}
 label.chk{display:flex;gap:10px;align-items:center;margin-top:12px;color:var(--text)}
 label.chk input{width:20px;height:20px;accent-color:var(--accent)}
 .orb{overflow:visible}
@@ -205,6 +218,7 @@ body.busy .orb .o-core,body.busy .orb .o-glow{animation-duration:.9s}
       <div class="chips">
         <select class="chip" id="mode" aria-label="Режим ответа"></select>
         <button class="chip" id="chipLib">Искать в библиотеке</button>
+        <select class="chip" id="libSec" aria-label="Раздел библиотеки" hidden></select>
         <button class="chip" id="chipTeam">Три роли</button>
         <button class="chip" id="chipNew">Новый разговор</button>
       </div>
@@ -217,6 +231,27 @@ body.busy .orb .o-core,body.busy .orb .o-glow{animation-duration:.9s}
 
   <section class="view" id="v-lib">
     <div class="scroll"><div class="wrap">
+      <div class="only-app" id="nlib">
+        <div class="card">
+          <input type="search" id="nq" placeholder="Поиск по библиотеке: слова или начало слова">
+          <div class="chips" id="nsecs" style="margin:10px 0 0"></div>
+          <div class="chips" id="nkinds" style="margin:8px 0 0"></div>
+          <div class="prog" id="nprog" hidden><i></i></div>
+          <div class="muted" id="nstat" style="margin-top:8px"></div>
+        </div>
+        <div id="nres"></div>
+        <div class="card">
+          <div class="btns" style="margin-top:0">
+            <button class="btn pri" id="nadd">Добавить файлы</button>
+            <button class="btn" id="nmk">Новый раздел</button>
+            <button class="btn" id="nscan">Обновить</button>
+          </div>
+          <div class="muted" style="margin-top:10px">Файлы лежат в папке <b>Jarvis/library</b> во внутренней памяти, каждый раздел — отдельная папка.
+            Можно класть туда что угодно через «Файлы» телефона и нажать «Обновить». Внутри текста ищу в txt, md, html, csv, json, fb2, docx, odt, epub и коде;
+            PDF, картинки, видео и звук нахожу по названию.</div>
+        </div>
+      </div>
+      <div class="only-web">
       <div class="card">
         <h3>Поиск по библиотеке</h3>
         <input type="search" id="q" placeholder="Слова для поиска">
@@ -237,6 +272,7 @@ body.busy .orb .o-core,body.busy .orb .o-glow{animation-duration:.9s}
       <div class="card muted">
         Подходят текстовые файлы: txt, md, html, csv, json, исходный код. PDF, Word, картинки и видео эта версия не читает.
         Библиотека хранится внутри приложения на этом телефоне и рассчитана на десятки мегабайт текста.
+      </div>
       </div>
     </div></div>
   </section>
@@ -317,7 +353,7 @@ body.busy .orb .o-core,body.busy .orb .o-glow{animation-duration:.9s}
 const DEF = {
   sys: 'Ты — Джарвис, личный помощник. Отвечай по-русски, точно и по делу, обращайся к пользователю «сэр». ' +
        'Если не знаешь ответа, скажи об этом прямо и не выдумывай.',
-  max: 1500, temp: 0.6, hist: 12000, top: 4, rounds: 2, url: '', model: '', lib: false, team: false, ctx: 8192, threads: 4, mode: 'std', auto: true, tts: false, vib: true, voice: '', rate: 1, pitch: 0.85
+  max: 1500, temp: 0.6, hist: 12000, top: 4, rounds: 2, url: '', model: '', lib: false, team: false, ctx: 8192, threads: 4, mode: 'std', auto: true, tts: false, vib: true, voice: '', rate: 1, pitch: 0.85, libSec: ''
 };
 const LS = { get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
              set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} } };
@@ -597,7 +633,7 @@ async function ask(text){
   try{
     let sys = sysPrompt(), srcs = [];
     if (S.lib){
-      const hits = await Lib.search(text, +S.top || 4);
+      const hits = appMode ? await NL.search(text, +S.top || 4) : await Lib.search(text, +S.top || 4);
       if (hits.length){
         srcs = hits.map(h => h.name);
         sys += '\n\nНиже фрагменты из библиотеки пользователя. Опирайся на них и ссылайся на номер фрагмента в квадратных скобках, например [1]. ' +
@@ -772,18 +808,89 @@ async function doSearch(){
   }).join('');
 }
 async function saveNote(title, text){
-  await Lib.add(title, text, 'note'); renderDocs();
+  if (!appMode){ await Lib.add(title, text, 'note'); renderDocs(); }
   let where = '';
   if (window.JarvisApp){ try{ where = window.JarvisApp.saveText(title.replace(/[^0-9A-Za-zА-Яа-яЁё._ -]+/g, '-') + '.md', text) || ''; }catch(e){} }
   toast(where ? 'Сохранено: ' + where : 'Сохранено в заметки');
 }
+
+/* ---------- библиотека приложения: папки на диске, индекс на стороне Android ---------- */
+const NL = (() => {
+  let st = { sections: [], docs: 0 }, sec = '', kind = '', timer = null, seq = 0;
+  const KINDS = [['', 'Всё'], ['text', 'Тексты'], ['image', 'Картинки'], ['video', 'Видео'], ['audio', 'Звук'], ['pdf', 'PDF']];
+  const ICON = { text:'📄', doc:'📘', pdf:'📕', image:'🖼', video:'🎬', audio:'🎵', other:'📦' };
+  const j = async u => (await api(u)).json();
+  const plural = (n, a, b2, c) => { const m = n % 100, k = n % 10; return m > 10 && m < 20 ? c : k === 1 ? a : k >= 2 && k <= 4 ? b2 : c; };
+  const size = b => b >= 1073741824 ? (b / 1073741824).toFixed(1) + ' ГБ' : b >= 1048576 ? (b / 1048576).toFixed(1) + ' МБ' : Math.max(1, Math.round(b / 1024)) + ' КБ';
+  function mark(text, stems){
+    return esc(text).replace(/[A-Za-zА-Яа-яЁё0-9]{2,}/g, w => { const n = w.toLowerCase().replace(/ё/g, 'е'); return stems.some(s => n.startsWith(s)) ? '<mark>' + w + '</mark>' : w; });
+  }
+  function item(h, stems){
+    const ic = h.kind === 'image' ? '<img loading="lazy" src="' + base() + '/app/file?id=' + h.doc + '" alt="">' : (ICON[h.kind] || ICON.other);
+    return '<div class="fitem" data-open="' + h.doc + '"><div class="ic">' + ic + '</div><div class="grow"><div class="nm">' + (stems ? mark(h.name, stems) : esc(h.name)) + '</div>' +
+      '<div class="meta">' + esc(h.section || '') + (h.size != null ? ' · ' + size(h.size) : '') + (h.kind === 'text' || h.kind === 'doc' ? (h.chunks === 0 ? ' · пустой' : '') : ' · ищется по названию') + '</div>' +
+      (h.snippet ? '<div class="sn">' + mark(h.snippet, stems || []) + '</div>' : '') + '</div>' +
+      (stems ? '' : '<button class="del" data-rm="' + h.doc + '" aria-label="Удалить">✕</button>') + '</div>';
+  }
+  async function status(){
+    try{ st = await j('/app/lib/status'); }catch(e){ $('nstat').textContent = 'Библиотека недоступна: ' + e.message; return; }
+    if (sec && !st.sections.some(x => x.name === sec)) sec = '';
+    $('nsecs').innerHTML = '<button class="chip' + (sec ? '' : ' on') + '" data-sec="">Все · ' + st.docs + '</button>' +
+      st.sections.map(x => '<button class="chip' + (x.name === sec ? ' on' : '') + '" data-sec="' + esc(x.name) + '">' + esc(x.name) + ' · ' + x.count + '</button>').join('');
+    $('nkinds').innerHTML = KINDS.map(k => '<button class="chip' + (k[0] === kind ? ' on' : '') + '" data-kind="' + k[0] + '">' + k[1] + '</button>').join('');
+    const pr = $('nprog'); pr.hidden = !st.indexing; pr.firstChild.style.width = st.total ? Math.round(100 * st.done / st.total) + '%' : '5%';
+    $('nstat').textContent = st.indexing ? 'Разбираю файлы: ' + st.done + ' из ' + st.total + (st.current ? ' — ' + st.current : '') : (st.error ? 'Последняя ошибка: ' + st.error : '');
+    const ls = $('libSec'), cur = S.libSec || '';
+    ls.innerHTML = '<option value="">Вся библиотека</option>' + st.sections.map(x => '<option value="' + esc(x.name) + '">' + esc(x.name) + '</option>').join('');
+    ls.value = st.sections.some(x => x.name === cur) ? cur : '';
+    clearTimeout(timer); if (st.indexing) timer = setTimeout(async () => { await status(); if (!st.indexing) show(); }, 900);
+  }
+  async function show(){
+    const q = $('nq').value.trim(), box = $('nres'), my = ++seq;
+    try{
+      if (q){
+        const r = await j('/app/lib/search?q=' + encodeURIComponent(q) + '&section=' + encodeURIComponent(sec) + '&kind=' + kind + '&limit=30');
+        if (my !== seq) return;
+        box.innerHTML = r.hits.length ? r.hits.map(h => item(h, r.stems || [])).join('') : '<div class="card muted">Ничего не найдено. Попробуйте другое слово или начало слова.</div>';
+      } else if (sec){
+        const r = await j('/app/lib/list?section=' + encodeURIComponent(sec)); if (my !== seq) return;
+        const fs = r.files.filter(f => !kind || f.kind === kind || (kind === 'text' && f.kind === 'doc'));
+        box.innerHTML = fs.length ? fs.map(f => item(f, null)).join('') : '<div class="card muted">В этом разделе пока пусто. Нажмите «Добавить файлы».</div>';
+      } else {
+        box.innerHTML = '<div class="secgrid">' + st.sections.map(x => '<button data-sec="' + esc(x.name) + '"><b>' + esc(x.name) + '</b><span>' + x.count + ' ' + plural(x.count, 'файл', 'файла', 'файлов') + '</span></button>').join('') + '</div>';
+      }
+    }catch(e){ box.innerHTML = '<div class="card err">Ошибка библиотеки: ' + esc(e.message) + '</div>'; }
+  }
+  async function refresh(){ await status(); await show(); }
+  async function search(q, k){
+    const r = await j('/app/lib/search?q=' + encodeURIComponent(q) + '&section=' + encodeURIComponent(S.libSec || '') + '&kind=text&full=1&limit=' + k);
+    return r.hits.filter(h => h.text).map(h => ({ name: h.section + ' / ' + h.name, text: h.text }));
+  }
+  function init(){
+    $('nq').addEventListener('input', () => { clearTimeout(init.t); init.t = setTimeout(show, 250); });
+    $('nlib').addEventListener('click', async e => {
+      const rm = e.target.closest('[data-rm]');
+      if (rm){ e.stopPropagation(); if (confirm('Удалить файл с телефона?')){ try{ await j('/app/lib/delete?id=' + rm.dataset.rm); }catch(x){ toast(x.message); } refresh(); } return; }
+      const sc = e.target.closest('[data-sec]'); if (sc){ sec = sc.dataset.sec; refresh(); return; }
+      const kd = e.target.closest('[data-kind]'); if (kd){ kind = kd.dataset.kind; refresh(); return; }
+      const op = e.target.closest('[data-open]'); if (op){ try{ await j('/app/lib/open?id=' + op.dataset.open); }catch(x){ toast(x.message); } }
+    });
+    $('nadd').onclick = () => { if (!window.JarvisApp || !window.JarvisApp.addFiles){ toast('Недоступно'); return; }
+      const to = sec || 'Разное'; toast('Файлы попадут в раздел «' + to + '»'); window.JarvisApp.addFiles(to); };
+    $('nmk').onclick = async () => { const n = prompt('Название нового раздела'); if (n && n.trim()){ try{ await j('/app/lib/mksection?name=' + encodeURIComponent(n.trim())); }catch(x){ toast(x.message); } refresh(); } };
+    $('nscan').onclick = async () => { try{ await j('/app/lib/scan'); }catch(x){ toast(x.message); } toast('Обновляю библиотеку'); refresh(); };
+    $('libSec').onchange = e => { S.libSec = e.target.value; saveSet(); };
+    window.libChanged = n => { toast('Добавлено файлов: ' + n); refresh(); };
+  }
+  return { init, refresh, status, search };
+})();
 
 /* ---------- события ---------- */
 document.querySelector('nav').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + b.dataset.v));
-  if (b.dataset.v === 'lib') renderDocs();
+  if (b.dataset.v === 'lib'){ if (appMode) NL.refresh(); else renderDocs(); }
   if (b.dataset.v === 'set') fillVoices();
 });
 const inp = $('inp');
@@ -796,7 +903,7 @@ $('send').addEventListener('click', () => {
   if (online && routerMode && (!cm || mState(cm) !== 'loaded')){ ask(t); return; }
   inp.value = ''; inp.style.height = 'auto'; ask(t);
 });
-function chips(){ $('chipLib').classList.toggle('on', !!S.lib); $('chipTeam').classList.toggle('on', !!S.team); $('mode').value = MODES[S.mode] ? S.mode : 'std'; }
+function chips(){ $('libSec').hidden = !(S.lib && appMode); if (S.lib && appMode) NL.status(); $('chipLib').classList.toggle('on', !!S.lib); $('chipTeam').classList.toggle('on', !!S.team); $('mode').value = MODES[S.mode] ? S.mode : 'std'; }
 $('mode').innerHTML = Object.keys(MODES).map(k => '<option value="' + k + '">' + MODES[k][0] + '</option>').join('');
 $('mode').onchange = e => { S.mode = e.target.value; saveSet(); toast('Режим: ' + MODES[S.mode][0]); };
 document.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) go(g.dataset.go);
@@ -864,7 +971,7 @@ $('pingBtn').onclick = async () => {
   catch(e){ o.textContent = 'Сервер не отвечает (' + e.message + '). Запустите его в Termux.'; }
 };
 
-fillSet(); chips(); renderChat(); loadModels();
+NL.init(); fillSet(); chips(); renderChat(); loadModels().then(chips);
 setInterval(() => { if (!busy && document.visibilityState === 'visible') loadModels(); }, 8000);
 </script>
 </body>

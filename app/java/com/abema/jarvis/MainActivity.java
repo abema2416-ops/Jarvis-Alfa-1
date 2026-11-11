@@ -11,6 +11,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.database.Cursor;
+import android.provider.OpenableColumns;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
@@ -29,7 +31,9 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -48,12 +52,15 @@ public class MainActivity extends Activity {
     private static final String ORIGIN = "http://" + HOST + ":" + Engine.PORT;
     private static final int REQ_FILES = 11;
     private static final int REQ_PERM = 12;
+    private static final int REQ_ADD = 13;
 
     private WebView web;
     private Engine engine;
     private ValueCallback<Uri[]> fileCallback;
     private TextToSpeech tts;
     private volatile boolean ttsOk;
+    private Library lib;
+    private String addSection = "Разное";
 
     @Override
     protected void onCreate(Bundle state) {
@@ -128,6 +135,63 @@ public class MainActivity extends Activity {
         }
     }
 
+    private synchronized Library lib() {
+        if (!hasAccess()) return null;
+        if (lib == null) {
+            lib = new Library(getApplicationContext(), new File(root(), "library"));
+            lib.ensureDirs();
+            lib.scan();
+        }
+        return lib;
+    }
+
+    private static String cleanName(String s) {
+        String n = new File(s == null ? "" : s).getName().replaceAll("[\\\\/:*?\"<>|]", " ").trim();
+        return n.length() == 0 ? "Разное" : n;
+    }
+
+    private void openFile(final File f) {
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                try {
+                    Intent i = new Intent(Intent.ACTION_VIEW);
+                    i.setDataAndType(FilesProvider.uriFor(f), FilesProvider.mime(f.getName()));
+                    i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(i, f.getName()));
+                } catch (Exception ignored) {
+                }
+            }
+        });
+    }
+
+    private JSONObject handleLib(Uri u, String path) throws Exception {
+        Library L = lib();
+        JSONObject o = new JSONObject();
+        if (L == null) return o.put("error", new JSONObject().put("message", "нет доступа к файлам"));
+        if ("/app/lib/status".equals(path)) return L.status();
+        if ("/app/lib/scan".equals(path)) { L.scan(); return o.put("ok", true); }
+        if ("/app/lib/search".equals(path)) {
+            return L.search(u.getQueryParameter("q"), u.getQueryParameter("section"), u.getQueryParameter("kind"),
+                    num(u.getQueryParameter("limit"), 20, 1, 60), "1".equals(u.getQueryParameter("full")));
+        }
+        if ("/app/lib/list".equals(path)) return L.list(u.getQueryParameter("section"));
+        if ("/app/lib/mksection".equals(path)) {
+            boolean ok = new File(L.root(), cleanName(u.getQueryParameter("name"))).mkdirs();
+            return o.put("ok", ok);
+        }
+        long id = -1;
+        try { id = Long.parseLong(u.getQueryParameter("id")); } catch (Exception ignored) { }
+        File f = id < 0 ? null : L.fileOf(id);
+        if (f == null || !f.isFile()) return o.put("error", new JSONObject().put("message", "файл не найден"));
+        if ("/app/lib/open".equals(path)) { openFile(f); return o.put("ok", true); }
+        if ("/app/lib/delete".equals(path)) {
+            boolean ok = f.delete();
+            if (ok) L.deleteDoc(id);
+            return o.put("ok", ok);
+        }
+        return o.put("error", new JSONObject().put("message", "неизвестная команда"));
+    }
+
     private void ensureDirs() {
         if (!hasAccess()) return;
         new File(root(), "models").mkdirs();
@@ -179,6 +243,8 @@ public class MainActivity extends Activity {
                 engine.start(f, c, t);
                 o.put("ok", true);
             }
+        } else if (path != null && path.startsWith("/app/lib/")) {
+            return handleLib(u, path);
         } else if ("/app/stop".equals(path)) {
             engine.stop();
             o.put("ok", true);
@@ -217,6 +283,14 @@ public class MainActivity extends Activity {
             try {
                 if ("/".equals(path) || "/index.html".equals(path)) {
                     return respond("text/html", 200, getAssets().open("ui/index.html"));
+                }
+                if ("/app/file".equals(path)) {
+                    Library L = lib();
+                    File f = L == null ? null : L.fileOf(Long.parseLong(u.getQueryParameter("id")));
+                    if (f == null || !f.isFile()) return respond("text/plain", 404, new ByteArrayInputStream(new byte[0]));
+                    Map<String, String> h = new HashMap<String, String>();
+                    h.put("Cache-Control", "max-age=3600");
+                    return new WebResourceResponse(FilesProvider.mime(f.getName()), null, 200, "OK", h, new FileInputStream(f));
                 }
                 if (path.startsWith("/app/")) {
                     JSONObject o = handleApp(u);
@@ -267,6 +341,16 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
+        if (req == REQ_ADD) {
+            final List<Uri> uris = new ArrayList<Uri>();
+            if (res == RESULT_OK && data != null) {
+                ClipData cd = data.getClipData();
+                if (cd != null) for (int i = 0; i < cd.getItemCount(); i++) uris.add(cd.getItemAt(i).getUri());
+                else if (data.getData() != null) uris.add(data.getData());
+            }
+            if (!uris.isEmpty()) copyIn(uris, addSection);
+            return;
+        }
         if (req != REQ_FILES || fileCallback == null) return;
         Uri[] out = null;
         if (res == RESULT_OK && data != null) {
@@ -280,6 +364,60 @@ public class MainActivity extends Activity {
         }
         fileCallback.onReceiveValue(out);
         fileCallback = null;
+    }
+
+    private String displayName(Uri u) {
+        String name = null;
+        try {
+            Cursor c = getContentResolver().query(u, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null);
+            if (c != null) {
+                try {
+                    if (c.moveToFirst()) name = c.getString(0);
+                } finally {
+                    c.close();
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        if (name == null || name.length() == 0) name = u.getLastPathSegment();
+        return cleanName(name == null ? "file" : name);
+    }
+
+    private void copyIn(final List<Uri> uris, final String section) {
+        final Library L = lib();
+        if (L == null) return;
+        new Thread(new Runnable() {
+            @Override public void run() {
+                int ok = 0;
+                File dir = new File(L.root(), cleanName(section));
+                dir.mkdirs();
+                for (Uri u : uris) {
+                    try {
+                        File out = new File(dir, displayName(u));
+                        InputStream in = getContentResolver().openInputStream(u);
+                        if (in == null) continue;
+                        OutputStream os = new FileOutputStream(out);
+                        try {
+                            byte[] buf = new byte[1 << 16];
+                            int n;
+                            while ((n = in.read(buf)) > 0) os.write(buf, 0, n);
+                        } finally {
+                            os.close();
+                            in.close();
+                        }
+                        ok++;
+                    } catch (Exception ignored) {
+                    }
+                }
+                L.scan();
+                final int done = ok;
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        web.evaluateJavascript("window.libChanged&&window.libChanged(" + done + ")", null);
+                    }
+                });
+            }
+        }, "library-copy").start();
     }
 
     private List<Voice> voiceList() {
@@ -309,6 +447,23 @@ public class MainActivity extends Activity {
 
     /** Мост для интерфейса: заметки файлами в Jarvis/notes и голос телефона. */
     private final class Bridge {
+        @JavascriptInterface
+        public void addFiles(String section) {
+            addSection = section == null || section.length() == 0 ? "Разное" : section;
+            runOnUiThread(new Runnable() {
+                @Override public void run() {
+                    Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                    i.addCategory(Intent.CATEGORY_OPENABLE);
+                    i.setType("*/*");
+                    i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                    try {
+                        startActivityForResult(Intent.createChooser(i, "Файлы в раздел «" + addSection + "»"), REQ_ADD);
+                    } catch (Exception ignored) {
+                    }
+                }
+            });
+        }
+
         @JavascriptInterface
         public String voices() {
             try {
@@ -376,14 +531,18 @@ public class MainActivity extends Activity {
                 if (!hasAccess()) return "";
                 ensureDirs();
                 String safe = new File(name == null ? "note.md" : name).getName().replace(':', '-');
-                File f = new File(new File(root(), "notes"), safe);
+                Library L = lib();
+                File nd = L == null ? new File(root(), "notes") : new File(L.root(), "Заметки");
+                nd.mkdirs();
+                File f = new File(nd, safe);
                 Writer w = new OutputStreamWriter(new FileOutputStream(f), "UTF-8");
                 try {
                     w.write(text == null ? "" : text);
                 } finally {
                     w.close();
                 }
-                return "Jarvis/notes/" + safe;
+                if (L != null) L.scan();
+                return (L == null ? "Jarvis/notes/" : "Библиотека/Заметки/") + safe;
             } catch (Exception e) {
                 return "";
             }
