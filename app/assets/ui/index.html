@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#0e1116">
+<title>Джарвис-1 Альфа</title>
+<style>
+:root{
+  --bg:#0e1116; --panel:#161b22; --panel2:#1d232c; --line:#2a323d; --text:#e6e9ee; --dim:#96a0ae;
+  --accent:#f0a030; --accent-ink:#1a1206; --ok:#3fb968; --bad:#e5534b; --warn:#d9a520;
+  --user:#223247; --code:#0a0d11; --radius:14px;
+}
+@media (prefers-color-scheme: light){
+  :root{ --bg:#f5f6f8; --panel:#ffffff; --panel2:#eef0f3; --line:#d6dae0; --text:#171a1f; --dim:#5d6672;
+    --accent:#b86a00; --accent-ink:#ffffff; --user:#dde8f6; --code:#f0f2f5; }
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+header{display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));
+  background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{font-weight:700;letter-spacing:.2px;white-space:nowrap}
+.brand small{color:var(--accent);font-weight:600;margin-left:4px}
+.model-btn{margin-left:auto;display:flex;align-items:center;gap:8px;min-width:0;max-width:62%;
+  padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel2)}
+.model-btn span.name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--bad);flex:none}
+.dot.ok{background:var(--ok)} .dot.wait{background:var(--warn)}
+nav{display:flex;background:var(--panel);border-bottom:1px solid var(--line)}
+nav button{flex:1;padding:10px 4px;color:var(--dim);font-size:14px;border-bottom:2px solid transparent}
+nav button.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+main{flex:1;min-height:0;display:flex;flex-direction:column}
+.view{display:none;flex:1;min-height:0;flex-direction:column}
+.view.on{display:flex}
+.scroll{flex:1;min-height:0;overflow-y:auto;padding:14px 16px;-webkit-overflow-scrolling:touch}
+.wrap{max-width:820px;margin:0 auto;width:100%}
+
+/* чат */
+.msg{margin:0 0 14px;display:flex;flex-direction:column}
+.msg .tag{font-size:12px;color:var(--dim);margin:0 4px 4px;display:flex;gap:8px;align-items:center}
+.msg .tag b{color:var(--accent);font-weight:600}
+.bubble{padding:10px 14px;border-radius:var(--radius);background:var(--panel);border:1px solid var(--line);
+  overflow-wrap:anywhere;min-width:0}
+.msg.user{align-items:flex-end}
+.msg.user .bubble{background:var(--user);border-color:transparent;max-width:88%;white-space:pre-wrap}
+.bubble p{margin:0 0 .6em} .bubble p:last-child{margin-bottom:0}
+.bubble h3,.bubble h4{margin:.7em 0 .3em;font-size:1.02em}
+.bubble ul,.bubble ol{margin:.2em 0 .6em;padding-left:1.3em}
+.bubble code{background:var(--code);padding:1px 5px;border-radius:5px;font:13.5px/1.45 ui-monospace,Menlo,Consolas,monospace}
+.codebox{margin:.5em 0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--code)}
+.codebox .bar{display:flex;justify-content:space-between;align-items:center;padding:4px 10px;font-size:12px;color:var(--dim);
+  border-bottom:1px solid var(--line)}
+.codebox .bar button{color:var(--accent);padding:4px 6px;font-size:12px}
+.codebox pre{margin:0;padding:10px 12px;overflow-x:auto}
+.codebox pre code{background:none;padding:0;white-space:pre}
+details.think{margin:0 0 .6em;color:var(--dim);font-size:14px}
+details.think summary{cursor:pointer}
+details.think div{white-space:pre-wrap;border-left:2px solid var(--line);padding-left:10px;margin-top:6px}
+.srcs{margin-top:8px;font-size:13px;color:var(--dim)}
+.srcs span{display:inline-block;margin:2px 6px 0 0;padding:2px 8px;border:1px solid var(--line);border-radius:999px}
+.acts{display:flex;gap:14px;margin:6px 4px 0;font-size:13px}
+.acts button{color:var(--dim);padding:2px 0} .acts button:active{color:var(--accent)}
+.empty{color:var(--dim);text-align:center;margin:12vh auto 0;max-width:420px}
+.empty h2{color:var(--text);font-size:20px;margin:0 0 8px}
+.err{color:var(--bad)}
+
+.composer{border-top:1px solid var(--line);background:var(--panel);padding:8px 12px;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.chips{display:flex;gap:8px;margin-bottom:8px;overflow-x:auto}
+.chip{flex:none;padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;color:var(--dim);background:var(--panel2)}
+.chip.on{color:var(--accent-ink);background:var(--accent);border-color:var(--accent);font-weight:600}
+.row{display:flex;gap:8px;align-items:flex-end}
+textarea#inp{flex:1;resize:none;max-height:38vh;min-height:44px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);
+  background:var(--bg);outline:none}
+textarea#inp:focus{border-color:var(--accent)}
+.send{flex:none;height:44px;min-width:44px;padding:0 14px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-weight:700}
+.send.stop{background:var(--bad);color:#fff}
+.send:disabled{opacity:.45}
+
+/* общее */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.card h3{margin:0 0 8px;font-size:16px}
+.muted{color:var(--dim);font-size:14px}
+.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);font-weight:600}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.sm{padding:6px 10px;font-size:13px}
+.btn.danger{color:var(--bad)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+input[type=text],input[type=number],input[type=search],textarea.set{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);outline:none}
+input:focus,textarea.set:focus{border-color:var(--accent)}
+label.f{display:block;margin:12px 0 4px;font-size:14px;color:var(--dim)}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.list li:first-child{border-top:0}
+.list .grow{flex:1;min-width:0}
+.list .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hit{padding:10px 0;border-top:1px solid var(--line)}
+.hit:first-child{border-top:0}
+.hit .n{font-size:13px;color:var(--accent);margin-bottom:2px}
+.hit .x{font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+mark{background:color-mix(in srgb,var(--accent) 35%,transparent);color:inherit;border-radius:3px}
+pre.cmd{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:10px 12px;overflow-x:auto;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;margin:8px 0}
+
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;z-index:10}
+.sheet.on{display:flex}
+.sheet .box{background:var(--panel);width:100%;max-width:820px;max-height:80dvh;overflow-y:auto;border-radius:18px 18px 0 0;
+  padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom))}
+.sheet h3{margin:0 0 4px}
+.badge{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.badge.ok{color:var(--ok);border-color:var(--ok)} .badge.wait{color:var(--warn);border-color:var(--warn)} .badge.bad{color:var(--bad);border-color:var(--bad)}
+select.chip{appearance:none;-webkit-appearance:none;padding-right:26px;color:var(--text);
+  background:var(--panel2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2396a0ae' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 10px center}
+.steps{text-align:left;margin:16px auto 0;max-width:420px;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:flex;gap:10px;align-items:flex-start;padding:10px 12px;margin-bottom:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--text)}
+.steps li::before{content:counter(s);flex:none;width:24px;height:24px;border-radius:50%;background:var(--panel2);color:var(--dim);display:grid;place-items:center;font-size:13px;font-weight:700}
+.steps li.done::before{content:"✓";background:var(--ok);color:#fff}
+.steps li.cur{border-color:var(--accent)}
+.steps .btn{margin-top:8px}
+pre.log{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:8px 10px;max-height:30dvh;overflow:auto;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0}
+.only-app,.only-web{display:none} body.app .only-app{display:block} body.web .only-web{display:block}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:999px;
+  font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90vw;text-align:center}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Джарвис-1<small>Альфа</small></div>
+  <button class="model-btn" id="modelBtn" aria-label="Выбор модели"><i class="dot" id="dot"></i><span class="name" id="modelName">нет связи</span></button>
+</header>
+<nav>
+  <button data-v="chat" class="on">Чат</button>
+  <button data-v="lib">Библиотека</button>
+  <button data-v="set">Настройки</button>
+</nav>
+<main>
+  <section class="view on" id="v-chat">
+    <div class="scroll" id="chatScroll"><div class="wrap" id="chat"></div></div>
+    <div class="composer"><div class="wrap">
+      <div class="chips">
+        <select class="chip" id="mode" aria-label="Режим ответа"></select>
+        <button class="chip" id="chipLib">Искать в библиотеке</button>
+        <button class="chip" id="chipTeam">Три роли</button>
+        <button class="chip" id="chipNew">Новый разговор</button>
+      </div>
+      <div class="row">
+        <textarea id="inp" rows="1" placeholder="Спросите что-нибудь, сэр"></textarea>
+        <button class="send" id="send" aria-label="Отправить">➤</button>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="view" id="v-lib">
+    <div class="scroll"><div class="wrap">
+      <div class="card">
+        <h3>Поиск по библиотеке</h3>
+        <input type="search" id="q" placeholder="Слова для поиска">
+        <div id="hits" class="muted" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <h3>Файлы</h3>
+        <div class="muted" id="libStat">Библиотека пуста.</div>
+        <div class="btns">
+          <button class="btn pri" id="addBtn">Добавить файлы</button>
+          <button class="btn" id="noteBtn">Новая заметка</button>
+          <button class="btn" id="expBtn">Выгрузить заметки</button>
+        </div>
+        <input type="file" id="file" multiple hidden>
+        <div class="muted" id="impLog" style="margin-top:8px"></div>
+        <ul class="list" id="docs" style="margin-top:6px"></ul>
+      </div>
+      <div class="card muted">
+        Подходят текстовые файлы: txt, md, html, csv, json, исходный код. PDF, Word, картинки и видео эта версия не читает.
+        Библиотека хранится внутри приложения на этом телефоне и рассчитана на десятки мегабайт текста.
+      </div>
+    </div></div>
+  </section>
+
+  <section class="view" id="v-set">
+    <div class="scroll"><div class="wrap">
+      <div class="card">
+        <h3>Ответы</h3>
+        <label class="f" for="sSys">Инструкция для модели</label>
+        <textarea class="set" id="sSys" rows="4"></textarea>
+        <label class="f" for="sMax">Максимальная длина ответа, токенов</label>
+        <input type="number" id="sMax" min="64" max="16384" step="64">
+        <label class="f" for="sTemp">Температура (0 — строго, 1 — свободно)</label>
+        <input type="number" id="sTemp" min="0" max="2" step="0.1">
+        <label class="f" for="sHist">Сколько прошлых символов разговора помнить</label>
+        <input type="number" id="sHist" min="1000" max="200000" step="1000">
+      </div>
+      <div class="card">
+        <h3>Библиотека и три роли</h3>
+        <label class="f" for="sTop">Сколько фрагментов библиотеки давать модели</label>
+        <input type="number" id="sTop" min="1" max="12" step="1">
+        <label class="f" for="sRounds">Сколько кругов доработки в режиме «Три роли»</label>
+        <input type="number" id="sRounds" min="1" max="5" step="1">
+        <div class="btns"><button class="btn pri" id="saveBtn">Сохранить</button></div>
+      </div>
+      <div class="card only-app">
+        <h3>Запуск модели</h3>
+        <label class="f" for="sCtx">Окно контекста, токенов (больше — модель помнит длиннее, но нужно больше памяти)</label>
+        <input type="number" id="sCtx" min="1024" max="131072" step="1024">
+        <label class="f" for="sThr">Потоки процессора (обычно 4; на новых флагманах можно 6)</label>
+        <input type="number" id="sThr" min="1" max="16" step="1">
+        <div class="muted" style="margin-top:8px">Изменения применяются при следующем запуске модели.</div>
+        <div class="btns"><button class="btn pri" id="saveBtn2">Сохранить</button></div>
+      </div>
+      <div class="card only-web">
+        <h3>Движок</h3>
+        <label class="f" for="sUrl">Адрес сервера llama.cpp (пусто — тот же, откуда открыта страница)</label>
+        <input type="text" id="sUrl" placeholder="http://127.0.0.1:8080">
+        <div class="btns"><button class="btn" id="pingBtn">Проверить связь</button></div>
+        <div class="muted" id="pingOut" style="margin-top:8px"></div>
+      </div>
+      <div class="card only-web">
+        <h3>Как запустить</h3>
+        <div class="muted">В Termux выполните:</div>
+        <pre class="cmd">bash ~/storage/shared/Jarvis/jarvis.sh</pre>
+        <div class="muted">Файлы моделей (.gguf) кладите в папку <b>Jarvis/models</b> во внутренней памяти телефона, затем нажмите на название модели вверху экрана.</div>
+      </div>
+    </div></div>
+  </section>
+</main>
+
+<div class="sheet" id="sheet"><div class="box">
+  <h3>Модели</h3>
+  <div class="muted" id="sheetNote">Файлы из папки Jarvis/models.</div>
+  <div id="sheetExtra"></div>
+  <ul class="list" id="models" style="margin-top:8px"></ul>
+  <pre class="log" id="logBox" hidden></pre>
+  <div class="btns"><button class="btn" id="refreshBtn">Обновить список</button><button class="btn" id="logBtn">Журнал</button><button class="btn" id="closeSheet">Закрыть</button></div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ---------- настройки и состояние ---------- */
+const DEF = {
+  sys: 'Ты — Джарвис, личный помощник. Отвечай по-русски, точно и по делу, обращайся к пользователю «сэр». ' +
+       'Если не знаешь ответа, скажи об этом прямо и не выдумывай.',
+  max: 1500, temp: 0.6, hist: 12000, top: 4, rounds: 2, url: '', model: '', lib: false, team: false, ctx: 8192, threads: 4, mode: 'std'
+};
+const LS = { get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+             set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} } };
+let S = Object.assign({}, DEF, LS.get('jarvis.set', {}));
+let msgs = LS.get('jarvis.chat', []);
+msgs.forEach(m => { delete m.live; });          // {role, content, tag?, ctx?, think?, srcs?, stat?}
+let models = [], busy = false, aborter = null, routerMode = false, appMode = false, app = {}, online = false;
+const MODES = {
+  std:   ['Помощник', ''],
+  code:  ['Программист', 'Сейчас ты опытный программист. Давай рабочий код целиком в блоках кода, с короткими пояснениями. Сначала реши задачу, потом объясняй.'],
+  teach: ['Учитель', 'Сейчас ты терпеливый учитель. Объясняй простыми словами, по шагам, с примерами из жизни. В конце задай один вопрос для самопроверки.'],
+  brief: ['Коротко', 'Отвечай максимально коротко: одна-три фразы, без вступлений.'],
+  idea:  ['Идеи', 'Сейчас ты генератор идей. Предлагай несколько разных вариантов списком и отмечай, какой считаешь лучшим и почему.']
+};
+const sysPrompt = () => S.sys + (MODES[S.mode] && MODES[S.mode][1] ? '\n\n' + MODES[S.mode][1] : '');
+const gb = b => (b / 1073741824).toFixed(b < 10737418240 ? 1 : 0) + ' ГБ';
+const $ = id => document.getElementById(id);
+const base = () => (S.url || '').replace(/\/+$/, '');
+const saveSet = () => LS.set('jarvis.set', S);
+const saveChat = () => LS.set('jarvis.chat', msgs.slice(-80));
+function toast(t){ const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2200); }
+
+/* ---------- разметка ответа ---------- */
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function inline(s){
+  return esc(s).replace(/`([^`\n]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>')
+    .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,!?:;]|$)/g, '$1<i>$2</i>');
+}
+function md(src){
+  const out = []; const parts = src.split(/```/);
+  for (let i = 0; i < parts.length; i++){
+    if (i % 2){
+      let body = parts[i], lang = '';
+      const nl = body.indexOf('\n');
+      if (nl >= 0 && /^[\w+#.-]{0,20}$/.test(body.slice(0, nl).trim())){ lang = body.slice(0, nl).trim(); body = body.slice(nl + 1); }
+      out.push('<div class="codebox"><div class="bar"><span>' + esc(lang || 'код') + '</span><button data-copy>Копировать</button></div><pre><code>' +
+               esc(body.replace(/\n$/, '')) + '</code></pre></div>');
+      continue;
+    }
+    const lines = parts[i].split('\n'); let para = [], list = null;
+    const flushP = () => { if (para.length){ out.push('<p>' + para.map(inline).join('<br>') + '</p>'); para = []; } };
+    const flushL = () => { if (list){ out.push('<' + list.t + '>' + list.items.map(x => '<li>' + inline(x) + '</li>').join('') + '</' + list.t + '>'); list = null; } };
+    for (const raw of lines){
+      const l = raw.replace(/\s+$/, ''); let m;
+      if (!l.trim()){ flushP(); flushL(); }
+      else if ((m = l.match(/^(#{1,6})\s+(.*)$/))){ flushP(); flushL(); out.push((m[1].length <= 2 ? '<h3>' : '<h4>') + inline(m[2]) + (m[1].length <= 2 ? '</h3>' : '</h4>')); }
+      else if ((m = l.match(/^\s*[-*•]\s+(.*)$/))){ flushP(); if (!list || list.t !== 'ul'){ flushL(); list = {t:'ul', items:[]}; } list.items.push(m[1]); }
+      else if ((m = l.match(/^\s*\d+[.)]\s+(.*)$/))){ flushP(); if (!list || list.t !== 'ol'){ flushL(); list = {t:'ol', items:[]}; } list.items.push(m[1]); }
+      else { flushL(); para.push(l); }
+    }
+    flushP(); flushL();
+  }
+  return out.join('');
+}
+
+/* ---------- чат: отрисовка ---------- */
+function msgHTML(m, i){
+  if (m.role === 'user') return '<div class="msg user"><div class="bubble">' + esc(m.content) + '</div></div>';
+  let h = '<div class="msg bot" data-i="' + i + '"><div class="tag"><b>' + esc(m.tag || 'Джарвис') + '</b>' + (m.stat ? '<span>' + esc(m.stat) + '</span>' : '') + '</div><div class="bubble">';
+  if (m.think) h += '<details class="think"><summary>Рассуждения модели</summary><div>' + esc(m.think) + '</div></details>';
+  h += m.err ? '<span class="err">' + esc(m.content) + '</span>' : (md(m.content || '') || '<span class="muted">…</span>');
+  if (m.srcs && m.srcs.length) h += '<div class="srcs">Источники: ' + m.srcs.map((s, k) => '<span>[' + (k + 1) + '] ' + esc(s) + '</span>').join('') + '</div>';
+  h += '</div>';
+  if (!m.live && !m.err && m.content) h += '<div class="acts"><button data-act="copy">Копировать</button><button data-act="note">В заметки</button></div>';
+  return h + '</div>';
+}
+function renderChat(){
+  const el = $('chat');
+  if (!msgs.length){
+    el.innerHTML = emptyHTML();
+    return;
+  }
+  el.innerHTML = msgs.map(msgHTML).join('');
+  scrollDown(true);
+}
+function emptyHTML(){
+  const cur = models.find(m => m.id === S.model), ready = cur && mState(cur) === 'loaded';
+  let h = '<div class="empty"><h2>К вашим услугам, сэр</h2>';
+  if (ready) return h + '<div>Модель в памяти. Задайте вопрос — всё работает на этом телефоне, без интернета.</div></div>';
+  if (!appMode) return h + '<div>Выберите модель вверху и задайте вопрос. Всё работает на этом телефоне, без интернета.</div></div>';
+  const s1 = !!app.perm, s2 = s1 && models.length > 0, s3 = s2 && cur && mState(cur) !== 'unloaded';
+  const li = (done, cur, t) => '<li class="' + (done ? 'done' : cur ? 'cur' : '') + '"><div>' + t + '</div></li>';
+  h += '<div>Три шага до первого ответа:</div><ol class="steps">' +
+    li(s1, !s1, 'Разрешите доступ к файлам, чтобы я видел модели.' + (s1 ? '' : '<br><button class="btn pri sm" data-go="grant">Разрешить</button>')) +
+    li(s2, s1 && !s2, 'Положите файл модели (.gguf) в папку <b>Jarvis/models</b> во внутренней памяти.' + (s1 && !s2 ? '<br><button class="btn sm" data-go="refresh">Я положил, проверить</button>' : '')) +
+    li(s3, s2 && !s3, 'Запустите модель.' + (s2 ? '<br><button class="btn pri sm" data-go="models">' + (s3 ? 'Модель загружается…' : 'Выбрать модель') + '</button>' : '')) +
+    '</ol></div>';
+  return h;
+}
+function renderLast(){
+  const el = $('chat'), i = msgs.length - 1, node = el.querySelector('.msg[data-i="' + i + '"]');
+  const tmp = document.createElement('div'); tmp.innerHTML = msgHTML(msgs[i], i);
+  if (node){
+    const open = node.querySelector('details.think') && node.querySelector('details.think').open;
+    node.replaceWith(tmp.firstChild);
+    if (open){ const d = el.querySelector('.msg[data-i="' + i + '"] details.think'); if (d) d.open = true; }
+  } else { if (el.querySelector('.empty')) el.innerHTML = ''; el.appendChild(tmp.firstChild); }
+  scrollDown(false);
+}
+function scrollDown(force){
+  const sc = $('chatScroll');
+  if (force || sc.scrollHeight - sc.scrollTop - sc.clientHeight < 160) sc.scrollTop = sc.scrollHeight;
+}
+
+/* ---------- движок: модели ---------- */
+async function api(path, opt){
+  const r = await fetch(base() + path, opt);
+  if (!r.ok){ let t = ''; try{ t = await r.text(); }catch(e){} let msg = 'HTTP ' + r.status;
+    try{ const j = JSON.parse(t); if (j.error) msg = j.error.message || msg; }catch(e){} throw new Error(msg); }
+  return r;
+}
+const mState = m => (m.status && m.status.value) || 'loaded';
+async function loadModels(reload){
+  const before = JSON.stringify([models, app.perm, online]);
+  const pm = models.find(m => m.id === S.model), prev = pm ? mState(pm) : '';
+  try{
+    const st = await fetch(base() + '/app/status').then(r => r.ok ? r.json() : null).catch(() => null);
+    if (st && st.app){
+      appMode = true; app = st; routerMode = true; online = true;
+      const j = await (await api('/app/models')).json();
+      let ready = false;
+      if (st.state === 'running'){ try{ ready = (await fetch(base() + '/health')).ok; }catch(e){} }
+      models = (j.models || []).map(m => { const mine = st.model === m.name;
+        return { id: m.name, size: m.size, status: { value: mine && st.state === 'running' ? (ready ? 'loaded' : 'loading') : 'unloaded' }, failed: mine && st.state === 'failed' }; });
+      if (!S.model || !models.some(m => m.id === S.model)){ S.model = models.some(m => m.id === st.model) ? st.model : (models[0] ? models[0].id : ''); saveSet(); }
+    } else {
+      appMode = false;
+      const j = await (await api('/models' + (reload ? '?reload=1' : ''))).json();
+      models = (j.data || j.models || []).map(m => ({ id: m.id || m.name || m.model, status: m.status, failed: m.status && m.status.failed }));
+      routerMode = models.some(m => m.status); online = true;
+      if (!S.model || !models.some(m => m.id === S.model)){
+        const l = models.find(m => mState(m) === 'loaded'); S.model = l ? l.id : (models[0] ? models[0].id : ''); saveSet();
+      }
+    }
+  }catch(e){ models = []; online = false; }
+  document.body.classList.toggle('app', appMode); document.body.classList.toggle('web', !appMode);
+  setHead(online); renderModels();
+  const nm = models.find(m => m.id === S.model);
+  if (prev === 'loading' && nm && mState(nm) === 'loaded'){ toast('Модель готова'); $('sheet').classList.remove('on'); }
+  if (!msgs.length && before !== JSON.stringify([models, app.perm, online])) renderChat();
+}
+function setHead(on){
+  const cur = models.find(m => m.id === S.model), st = cur ? mState(cur) : '';
+  $('dot').className = 'dot' + (!on ? '' : st === 'loaded' ? ' ok' : st === 'loading' ? ' wait' : '');
+  $('modelName').textContent = !on ? 'нет связи' : !cur ? 'нет моделей' : st === 'loaded' ? cur.id : st === 'loading' ? 'Загружается…' : 'Выбрать модель';
+}
+function renderModels(){
+  const ul = $('models'), ex = $('sheetExtra'); let extra = '';
+  if (appMode){
+    if (!app.perm) extra = '<div class="card" style="margin:10px 0 0">Чтобы видеть файлы моделей, нужен доступ к памяти телефона.<div class="btns"><button class="btn pri" data-go="grant">Разрешить доступ</button></div></div>';
+    const fit = Math.max(0, (app.totalMem || 0) * 0.72 - 2.5 * 1073741824);
+    $('sheetNote').innerHTML = app.perm ? 'Папка: <b>Jarvis/models</b> во внутренней памяти. Память телефона: ' + gb(app.totalMem || 0) +
+      ', подойдут файлы примерно до ' + gb(fit) + '.' + (models.length ? '' : '<br>Файлов .gguf пока нет.') : 'Нет доступа к файлам.';
+  } else {
+    $('sheetNote').textContent = models.length ? (routerMode ? 'Файлы из папки Jarvis/models. Одновременно в памяти держится одна модель.' : 'Сервер запущен с одной моделью.')
+      : 'Сервер не отвечает или в папке Jarvis/models нет файлов .gguf.';
+  }
+  ex.innerHTML = extra;
+  const fitB = appMode ? Math.max(0, (app.totalMem || 0) * 0.72 - 2.5 * 1073741824) : 0;
+  ul.innerHTML = models.map(m => {
+    const st = mState(m), big = appMode && m.size > fitB;
+    const lab = m.failed ? 'не запустилась' : st === 'loaded' ? 'в памяти' : st === 'loading' ? 'загружается' : st === 'sleeping' ? 'спит' : big ? 'может не хватить памяти' : 'на диске';
+    const cls = m.failed ? 'bad' : st === 'loaded' ? 'ok' : st === 'loading' || big ? 'wait' : '';
+    return '<li><div class="grow"><div class="t">' + esc(m.id) + '</div><span class="badge ' + cls + '">' + lab + '</span>' +
+      (m.size ? ' <span class="muted">' + gb(m.size) + '</span>' : '') + '</div>' +
+      (routerMode && (st === 'loaded' || st === 'loading') ? '<button class="btn sm" data-un="' + esc(m.id) + '">Остановить</button>' :
+        '<button class="btn sm pri" data-use="' + esc(m.id) + '">' + (st === 'loaded' ? 'Выбрать' : 'Запустить') + '</button>') + '</li>';
+  }).join('');
+  const lb = $('logBox'); $('logBtn').style.display = appMode ? '' : 'none';
+  if (appMode && !lb.hidden) lb.textContent = (app.log || []).join('\n') || 'Журнал пуст.';
+}
+async function useModel(id){
+  S.model = id; saveSet();
+  const m = models.find(x => x.id === id);
+  if (routerMode && m && mState(m) !== 'loaded'){
+    try{
+      if (appMode) await api('/app/start?name=' + encodeURIComponent(id) + '&ctx=' + (+S.ctx || 8192) + '&threads=' + (+S.threads || 4));
+      else await api('/models/load', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model: id }) });
+      toast('Загружаю модель в память');
+    }catch(e){ toast('Не удалось запустить: ' + e.message); }
+    await loadModels(); pollModels();
+  } else { setHead(online); renderModels(); $('sheet').classList.remove('on'); }
+}
+async function unloadModel(id){
+  try{
+    if (appMode) await api('/app/stop');
+    else await api('/models/unload', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model: id }) });
+  }catch(e){ toast(e.message); }
+  setTimeout(loadModels, 600);
+}
+async function go(what){
+  if (what === 'grant'){ try{ await api('/app/grant'); }catch(e){} toast('Включите доступ и вернитесь в приложение'); }
+  if (what === 'refresh'){ await loadModels(true); toast(models.length ? 'Нашёл моделей: ' + models.length : 'Файлов .gguf в Jarvis/models пока нет'); }
+  if (what === 'models'){ $('sheet').classList.add('on'); loadModels(true); }
+}
+function pollModels(){
+  clearInterval(pollModels.t); let n = 0;
+  pollModels.t = setInterval(async () => {
+    await loadModels(); const m = models.find(x => x.id === S.model);
+    if (++n > 400 || !m || mState(m) !== 'loading' || m.failed){ clearInterval(pollModels.t); if (m && m.failed){ toast('Модель не запустилась. Возможно, не хватает памяти'); $('logBox').hidden = false; renderModels(); } }
+  }, 1500);
+}
+
+/* ---------- движок: генерация ---------- */
+async function generate(messages, target){
+  const body = { messages, stream: true, max_tokens: +S.max || 1500, temperature: +S.temp, cache_prompt: true };
+  if (S.model && !appMode) body.model = S.model;
+  aborter = new AbortController();
+  const t0 = performance.now(); let n = 0, tFirst = 0, tps = 0;
+  const r = await api('/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), signal: aborter.signal });
+  const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '', last = 0;
+  for(;;){
+    const { done, value } = await rd.read(); if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let k;
+    while ((k = buf.indexOf('\n')) >= 0){
+      const line = buf.slice(0, k).trim(); buf = buf.slice(k + 1);
+      if (!line.startsWith('data:')) continue;
+      const d = line.slice(5).trim(); if (d === '[DONE]') continue;
+      let j; try{ j = JSON.parse(d); }catch(e){ continue; }
+      if (j.error) throw new Error(j.error.message || 'ошибка модели');
+      const c = j.choices && j.choices[0] && j.choices[0].delta;
+      if (c){
+        if (c.reasoning_content){ target.think = (target.think || '') + c.reasoning_content; }
+        if (c.content){ target.content += c.content; n++; if (!tFirst) tFirst = performance.now(); }
+      }
+      if (j.timings && j.timings.predicted_per_second) tps = j.timings.predicted_per_second;
+      const now = performance.now(); if (now - last > 90){ last = now; renderLast(); }
+    }
+  }
+  if (!tps && n > 1 && tFirst) tps = (n - 1) / ((performance.now() - tFirst) / 1000);
+  target.stat = (tps ? tps.toFixed(1) + ' ток/с · ' : '') + ((performance.now() - t0) / 1000).toFixed(0) + ' с';
+}
+function history(){
+  const out = []; let left = +S.hist || 12000;
+  for (let i = msgs.length - 1; i >= 0; i--){
+    const m = msgs[i]; if (m.ctx === false || m.err || m.live) continue;
+    left -= m.content.length; if (left < 0 && out.length) break;
+    out.unshift({ role: m.role, content: m.content });
+  }
+  return out;
+}
+async function runStep(tag, messages, ctx){
+  const m = { role:'assistant', content:'', tag, live:true, ctx };
+  msgs.push(m); renderLast();
+  try{ await generate(messages, m); }
+  catch(e){
+    if (e.name === 'AbortError'){ m.stat = 'остановлено'; if (!m.content){ m.content = 'Остановлено.'; m.err = true; } }
+    else { m.err = true; m.content = 'Ошибка: ' + e.message + '. Проверьте, что модель запущена.'; }
+    m.live = false; renderLast(); saveChat(); throw e;
+  }
+  m.live = false; renderLast(); saveChat(); return m;
+}
+async function ask(text){
+  if (busy) return;
+  const cm = models.find(m => m.id === S.model);
+  if (online && routerMode && (!cm || mState(cm) !== 'loaded')){ toast(cm && mState(cm) === 'loading' ? 'Модель ещё загружается' : 'Сначала запустите модель'); go('models'); return false; }
+  busy = true; setBusy(true);
+  msgs.push({ role:'user', content:text }); renderLast(); scrollDown(true); saveChat();
+  try{
+    let sys = sysPrompt(), srcs = [];
+    if (S.lib){
+      const hits = await Lib.search(text, +S.top || 4);
+      if (hits.length){
+        srcs = hits.map(h => h.name);
+        sys += '\n\nНиже фрагменты из библиотеки пользователя. Опирайся на них и ссылайся на номер фрагмента в квадратных скобках, например [1]. ' +
+               'Если ответа во фрагментах нет, скажи об этом и отвечай по своим знаниям.\n\n' +
+               hits.map((h, i) => '[' + (i + 1) + '] ' + h.name + '\n' + h.text).join('\n\n');
+      }
+    }
+    if (S.team) await team(text, sys, srcs);
+    else { const m = await runStep('Джарвис', [{ role:'system', content: sys }].concat(history()), true); m.srcs = srcs; renderLast(); saveChat(); }
+  }catch(e){ /* уже показано */ }
+  busy = false; aborter = null; setBusy(false);
+}
+/* три роли: архитектор -> программист -> проверяющий, по кругу */
+async function team(task, sys, srcs){
+  const hist = history().slice(0, -1);
+  const call = (tag, role, user, ctx) => runStep(tag, [{ role:'system', content: sys + '\n\n' + role }].concat(hist, [{ role:'user', content:user }]), ctx);
+  const plan = await call('Архитектор',
+    'Сейчас ты архитектор. Составь короткий пошаговый план решения задачи: части, порядок, важные решения и крайние случаи. Код не пиши.', 'Задача:\n' + task, false);
+  plan.srcs = srcs; renderLast();
+  let work = await call('Исполнитель',
+    'Сейчас ты исполнитель. Выполни задачу строго по плану архитектора. Дай полное готовое решение; если это код — целиком, в блоках кода.',
+    'Задача:\n' + task + '\n\nПлан архитектора:\n' + plan.content, false);
+  const rounds = Math.max(1, Math.min(5, +S.rounds || 2));
+  for (let r = 1; r <= rounds; r++){
+    const rev = await call('Проверяющий, круг ' + r,
+      'Сейчас ты проверяющий. Найди ошибки и пропуски в решении. Первая строка ответа — ровно «ВЕРДИКТ: ГОТОВО» или «ВЕРДИКТ: ДОРАБОТАТЬ». ' +
+      'Если нужно доработать, перечисли конкретные исправления списком. Само решение не переписывай.',
+      'Задача:\n' + task + '\n\nПлан:\n' + plan.content + '\n\nРешение:\n' + work.content, false);
+    if (!/ДОРАБОТАТЬ/i.test(rev.content.slice(0, 200))) break;
+    if (r === rounds) break;
+    work = await call('Исполнитель, доработка ' + r,
+      'Сейчас ты исполнитель. Исправь решение по замечаниям проверяющего и выдай полную исправленную версию целиком.',
+      'Задача:\n' + task + '\n\nПлан:\n' + plan.content + '\n\nТекущее решение:\n' + work.content + '\n\nЗамечания:\n' + rev.content, false);
+  }
+  work.ctx = true; saveChat();   // в память разговора идёт только итог
+}
+function setBusy(b){
+  const s = $('send'); s.classList.toggle('stop', b); s.textContent = b ? '■' : '➤'; s.setAttribute('aria-label', b ? 'Остановить' : 'Отправить');
+}
+
+/* ---------- библиотека: IndexedDB + поиск по словам ---------- */
+const Lib = (() => {
+  let db = null, index = null, chunks = null, N = 0, avg = 1;
+  const END = ['иями','ями','ами','ого','его','ому','ему','ыми','ими','ией','иях','ых','их','ий','ый','ой','ая','яя','ое','ее','ые','ие','ов','ев','ей','ам','ям','ах','ях','ом','ем','ую','юю','ть','ся','а','я','о','е','ы','и','у','ю','ь',
+               'ing','ed','es','s'];
+  function stem(w){
+    if (w.length > 4) for (const e of END) if (w.endsWith(e) && w.length - e.length >= 3) return w.slice(0, w.length - e.length);
+    return w;
+  }
+  function toks(t){
+    const m = t.toLowerCase().replace(/ё/g, 'е').match(/[a-zа-я0-9]{2,}/g) || [];
+    return m.map(stem);
+  }
+  function open(){
+    return new Promise((res, rej) => {
+      if (db) return res(db);
+      const rq = indexedDB.open('jarvis-lib', 1);
+      rq.onupgradeneeded = () => { const d = rq.result; d.createObjectStore('docs', { keyPath:'id', autoIncrement:true });
+        d.createObjectStore('chunks', { keyPath:'id', autoIncrement:true }).createIndex('doc', 'doc'); };
+      rq.onsuccess = () => { db = rq.result; res(db); }; rq.onerror = () => rej(rq.error);
+    });
+  }
+  const done = tx => new Promise((res, rej) => { tx.oncomplete = () => res(); tx.onerror = tx.onabort = () => rej(tx.error); });
+  const req = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  function split(text){
+    const out = []; let cur = '';
+    for (const p of text.replace(/\r/g, '').split(/\n{2,}/)){
+      const s = p.trim(); if (!s) continue;
+      if (cur && cur.length + s.length > 1200){ out.push(cur); cur = ''; }
+      if (s.length > 1500){ if (cur){ out.push(cur); cur = ''; } for (let i = 0; i < s.length; i += 1200) out.push(s.slice(i, i + 1200)); }
+      else cur = cur ? cur + '\n\n' + s : s;
+    }
+    if (cur) out.push(cur); return out;
+  }
+  async function add(name, text, kind){
+    const d = await open(), parts = split(text); if (!parts.length) return 0;
+    const tx = d.transaction(['docs', 'chunks'], 'readwrite');
+    const id = await req(tx.objectStore('docs').add({ name, size: text.length, n: parts.length, kind: kind || 'file', added: Date.now() }));
+    const st = tx.objectStore('chunks'); parts.forEach((t, i) => st.add({ doc: id, name, i, text: t }));
+    await done(tx); index = null; return parts.length;
+  }
+  async function remove(id){
+    const d = await open(), tx = d.transaction(['docs', 'chunks'], 'readwrite');
+    tx.objectStore('docs').delete(id);
+    const keys = await req(tx.objectStore('chunks').index('doc').getAllKeys(id)); keys.forEach(k => tx.objectStore('chunks').delete(k));
+    await done(tx); index = null;
+  }
+  async function docs(){ const d = await open(); return req(d.transaction('docs').objectStore('docs').getAll()); }
+  async function notes(){ const d = await open(), ds = (await docs()).filter(x => x.kind === 'note'), out = [];
+    for (const x of ds){ const cs = await req(d.transaction('chunks').objectStore('chunks').index('doc').getAll(x.id)); out.push('# ' + x.name + '\n\n' + cs.map(c => c.text).join('\n\n')); }
+    return out.join('\n\n---\n\n'); }
+  async function build(){
+    const d = await open(); index = new Map(); chunks = new Map(); let total = 0;
+    const all = await req(d.transaction('chunks').objectStore('chunks').getAll());
+    for (const c of all){
+      const ts = toks(c.name + ' ' + c.text), tf = new Map(); for (const t of ts) tf.set(t, (tf.get(t) || 0) + 1);
+      chunks.set(c.id, { name: c.name, text: c.text, len: ts.length }); total += ts.length;
+      for (const [t, f] of tf){ let p = index.get(t); if (!p){ p = []; index.set(t, p); } p.push(c.id, f); }
+    }
+    N = all.length; avg = N ? total / N : 1;
+  }
+  async function search(q, k){
+    if (!index) await build(); if (!N) return [];
+    const qs = [...new Set(toks(q))].filter(t => t.length > 1), score = new Map();
+    for (const t of qs){
+      const p = index.get(t); if (!p) continue;
+      const df = p.length / 2, idf = Math.log(1 + (N - df + 0.5) / (df + 0.5));
+      for (let i = 0; i < p.length; i += 2){
+        const c = chunks.get(p[i]), f = p[i + 1];
+        score.set(p[i], (score.get(p[i]) || 0) + idf * f * 2.2 / (f + 1.2 * (0.25 + 0.75 * c.len / avg)));
+      }
+    }
+    return [...score].sort((a, b) => b[1] - a[1]).slice(0, k).map(([id, s]) => Object.assign({ id, score: s, terms: qs }, chunks.get(id)));
+  }
+  return { add, remove, docs, search, notes, stem, toks };
+})();
+
+const TEXT_EXT = /\.(txt|md|markdown|html?|csv|tsv|json|xml|tex|log|ini|ya?ml|toml|py|js|ts|java|kt|c|h|cpp|hpp|cs|rs|go|rb|php|sh|bat|sql|css|lua|swift)$/i;
+async function importFiles(files){
+  const log = $('impLog'); let ok = 0, skip = 0;
+  for (const f of files){
+    if (!TEXT_EXT.test(f.name) && !/^text\//.test(f.type)){ skip++; continue; }
+    log.textContent = 'Читаю ' + f.name + '…';
+    try{
+      let t = await f.text();
+      if (/\.html?$/i.test(f.name)){ const d = new DOMParser().parseFromString(t, 'text/html'); d.querySelectorAll('script,style,nav,footer').forEach(x => x.remove()); t = d.body ? d.body.innerText || d.body.textContent : t; }
+      if (await Lib.add(f.name, t)) ok++; else skip++;
+    }catch(e){ skip++; }
+  }
+  log.textContent = 'Добавлено файлов: ' + ok + (skip ? ', пропущено: ' + skip : '') + '.';
+  renderDocs();
+}
+async function renderDocs(){
+  let ds = []; try{ ds = await Lib.docs(); }catch(e){ $('libStat').textContent = 'Хранилище браузера недоступно.'; return; }
+  const size = ds.reduce((a, d) => a + d.size, 0), n = ds.reduce((a, d) => a + d.n, 0);
+  $('libStat').textContent = ds.length ? 'Файлов: ' + ds.length + ', фрагментов: ' + n + ', текста: ' + (size >= 1048576 ? (size / 1048576).toFixed(1) + ' МБ.' : Math.max(1, Math.round(size / 1024)) + ' КБ.') : 'Библиотека пуста.';
+  $('docs').innerHTML = ds.sort((a, b) => b.added - a.added).map(d =>
+    '<li><div class="grow"><div class="t">' + esc(d.name) + '</div><div class="muted">' + (d.kind === 'note' ? 'заметка · ' : '') + Math.max(1, Math.round(d.size / 1024)) + ' КБ</div></div>' +
+    '<button class="btn sm danger" data-del="' + d.id + '">Удалить</button></li>').join('');
+}
+async function doSearch(){
+  const q = $('q').value.trim(), box = $('hits'); if (!q){ box.innerHTML = ''; return; }
+  const hits = await Lib.search(q, 8);
+  if (!hits.length){ box.textContent = 'Ничего не найдено.'; return; }
+  box.innerHTML = hits.map(h => {
+    let x = esc(h.text.length > 420 ? h.text.slice(0, 420) + '…' : h.text);
+    x = x.replace(/[A-Za-zА-Яа-яЁё0-9]{2,}/g, w => h.terms.includes(Lib.stem(w.toLowerCase().replace(/ё/g, 'е'))) ? '<mark>' + w + '</mark>' : w);
+    return '<div class="hit"><div class="n">' + esc(h.name) + '</div><div class="x">' + x + '</div></div>';
+  }).join('');
+}
+async function saveNote(title, text){
+  await Lib.add(title, text, 'note'); renderDocs();
+  let where = '';
+  if (window.JarvisApp){ try{ where = window.JarvisApp.saveText(title.replace(/[^0-9A-Za-zА-Яа-яЁё._ -]+/g, '-') + '.md', text) || ''; }catch(e){} }
+  toast(where ? 'Сохранено: ' + where : 'Сохранено в заметки');
+}
+
+/* ---------- события ---------- */
+document.querySelector('nav').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + b.dataset.v));
+  if (b.dataset.v === 'lib') renderDocs();
+});
+const inp = $('inp');
+inp.addEventListener('input', () => { inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, innerHeight * 0.38) + 'px'; });
+inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && matchMedia('(pointer:fine)').matches){ e.preventDefault(); $('send').click(); } });
+$('send').addEventListener('click', () => {
+  if (busy){ if (aborter) aborter.abort(); return; }
+  const t = inp.value.trim(); if (!t) return;
+  const cm = models.find(m => m.id === S.model);
+  if (online && routerMode && (!cm || mState(cm) !== 'loaded')){ ask(t); return; }
+  inp.value = ''; inp.style.height = 'auto'; ask(t);
+});
+function chips(){ $('chipLib').classList.toggle('on', !!S.lib); $('chipTeam').classList.toggle('on', !!S.team); $('mode').value = MODES[S.mode] ? S.mode : 'std'; }
+$('mode').innerHTML = Object.keys(MODES).map(k => '<option value="' + k + '">' + MODES[k][0] + '</option>').join('');
+$('mode').onchange = e => { S.mode = e.target.value; saveSet(); toast('Режим: ' + MODES[S.mode][0]); };
+document.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) go(g.dataset.go); });
+$('logBtn').onclick = () => { const lb = $('logBox'); lb.hidden = !lb.hidden; renderModels(); };
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadModels(true); });
+$('chipLib').onclick = () => { S.lib = !S.lib; saveSet(); chips(); };
+$('chipTeam').onclick = () => { S.team = !S.team; saveSet(); chips(); };
+$('chipNew').onclick = () => { if (busy) return; msgs = []; saveChat(); renderChat(); };
+$('chat').addEventListener('click', e => {
+  const cp = e.target.closest('[data-copy]');
+  if (cp){ copy(cp.closest('.codebox').querySelector('code').textContent); return; }
+  const a = e.target.closest('[data-act]'); if (!a) return;
+  const m = msgs[+a.closest('.msg').dataset.i]; if (!m) return;
+  if (a.dataset.act === 'copy') copy(m.content);
+  if (a.dataset.act === 'note') saveNote('Заметка ' + new Date().toLocaleString('ru-RU'), m.content);
+});
+function copy(t){
+  const fb = () => { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(e){} ta.remove(); };
+  if (navigator.clipboard && isSecureContext) navigator.clipboard.writeText(t).catch(fb); else fb();
+  toast('Скопировано');
+}
+$('modelBtn').onclick = () => { $('sheet').classList.add('on'); loadModels(true); };
+$('closeSheet').onclick = () => $('sheet').classList.remove('on');
+$('sheet').addEventListener('click', e => { if (e.target === $('sheet')) $('sheet').classList.remove('on'); });
+$('refreshBtn').onclick = () => loadModels(true);
+$('models').addEventListener('click', e => {
+  const u = e.target.closest('[data-use]'), n = e.target.closest('[data-un]');
+  if (u) useModel(u.dataset.use); if (n) unloadModel(n.dataset.un);
+});
+$('addBtn').onclick = () => $('file').click();
+$('file').onchange = e => { importFiles([...e.target.files]); e.target.value = ''; };
+$('noteBtn').onclick = () => { const t = prompt('Текст заметки'); if (t && t.trim()) saveNote('Заметка ' + new Date().toLocaleString('ru-RU'), t.trim()); };
+$('expBtn').onclick = async () => {
+  const t = await Lib.notes(); if (!t){ toast('Заметок пока нет'); return; }
+  if (window.JarvisApp){ const w = window.JarvisApp.saveText('jarvis-notes.md', t); toast(w ? 'Сохранено: ' + w : 'Не удалось сохранить файл'); return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type:'text/markdown' })); a.download = 'jarvis-notes.md'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+};
+$('docs').addEventListener('click', async e => { const b = e.target.closest('[data-del]'); if (b && confirm('Удалить из библиотеки?')){ await Lib.remove(+b.dataset.del); renderDocs(); doSearch(); } });
+$('q').addEventListener('input', () => { clearTimeout(doSearch.t); doSearch.t = setTimeout(doSearch, 250); });
+function fillSet(){ $('sCtx').value = S.ctx; $('sThr').value = S.threads; $('sSys').value = S.sys; $('sMax').value = S.max; $('sTemp').value = S.temp; $('sHist').value = S.hist; $('sTop').value = S.top; $('sRounds').value = S.rounds; $('sUrl').value = S.url; }
+$('saveBtn').onclick = () => {
+  S.sys = $('sSys').value.trim() || DEF.sys; S.max = +$('sMax').value || DEF.max; S.temp = isNaN(+$('sTemp').value) ? DEF.temp : +$('sTemp').value;
+  S.hist = +$('sHist').value || DEF.hist; S.top = +$('sTop').value || DEF.top; S.rounds = +$('sRounds').value || DEF.rounds; S.url = $('sUrl').value.trim();
+  S.ctx = +$('sCtx').value || DEF.ctx; S.threads = +$('sThr').value || DEF.threads;
+  saveSet(); fillSet(); toast('Сохранено'); loadModels();
+};
+$('saveBtn2').onclick = () => $('saveBtn').click();
+$('pingBtn').onclick = async () => {
+  S.url = $('sUrl').value.trim(); const o = $('pingOut'); o.textContent = 'Проверяю…';
+  try{ await api('/health'); await loadModels(); o.textContent = 'Связь есть. Моделей найдено: ' + models.length + '.'; }
+  catch(e){ o.textContent = 'Сервер не отвечает (' + e.message + '). Запустите его в Termux.'; }
+};
+
+fillSet(); chips(); renderChat(); loadModels();
+setInterval(() => { if (!busy && document.visibilityState === 'visible') loadModels(); }, 8000);
+</script>
+</body>
+</html>
