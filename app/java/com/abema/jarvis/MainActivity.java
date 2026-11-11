@@ -12,6 +12,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.Voice;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
@@ -32,7 +34,12 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Locale;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 
@@ -45,12 +52,21 @@ public class MainActivity extends Activity {
     private WebView web;
     private Engine engine;
     private ValueCallback<Uri[]> fileCallback;
+    private TextToSpeech tts;
+    private volatile boolean ttsOk;
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         engine = Engine.get(this);
+        try {
+            tts = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+                @Override public void onInit(int status) { ttsOk = status == TextToSpeech.SUCCESS; }
+            });
+        } catch (Exception e) {
+            tts = null;
+        }
         getWindow().setStatusBarColor(0xFF070B12);
         getWindow().setNavigationBarColor(0xFF070B12);
         web = new WebView(this);
@@ -77,6 +93,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         if (isFinishing()) engine.stop();
+        try { if (tts != null) { tts.stop(); tts.shutdown(); } } catch (Exception ignored) { }
         super.onDestroy();
     }
 
@@ -265,8 +282,94 @@ public class MainActivity extends Activity {
         fileCallback = null;
     }
 
-    /** Мост для интерфейса: сохранение заметок файлами в Jarvis/notes. */
+    private List<Voice> voiceList() {
+        List<Voice> out = new ArrayList<Voice>();
+        if (tts == null || !ttsOk) return out;
+        try {
+            Set<Voice> all = tts.getVoices();
+            if (all != null) {
+                for (Voice v : all) {
+                    if (v == null || v.getLocale() == null) continue;
+                    String lang = v.getLocale().getLanguage();
+                    if ("ru".equals(lang) || "en".equals(lang)) out.add(v);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        Collections.sort(out, new Comparator<Voice>() {
+            @Override public int compare(Voice a, Voice b) {
+                int ra = "ru".equals(a.getLocale().getLanguage()) ? 0 : 1;
+                int rb = "ru".equals(b.getLocale().getLanguage()) ? 0 : 1;
+                if (ra != rb) return ra - rb;
+                return a.getName().compareTo(b.getName());
+            }
+        });
+        return out;
+    }
+
+    /** Мост для интерфейса: заметки файлами в Jarvis/notes и голос телефона. */
     private final class Bridge {
+        @JavascriptInterface
+        public String voices() {
+            try {
+                JSONArray arr = new JSONArray();
+                for (Voice v : voiceList()) {
+                    JSONObject o = new JSONObject();
+                    o.put("name", v.getName());
+                    String where = v.isNetworkConnectionRequired() ? "нужен интернет" : "офлайн";
+                    o.put("label", v.getLocale().getDisplayName(new Locale("ru")) + " · " + v.getName() + " · " + where);
+                    arr.put(o);
+                }
+                return arr.toString();
+            } catch (Exception e) {
+                return "[]";
+            }
+        }
+
+        @JavascriptInterface
+        public boolean speak(String text, String voice, double rate, double pitch) {
+            if (tts == null || !ttsOk || text == null) return false;
+            try {
+                Voice chosen = null;
+                if (voice != null && voice.length() > 0) {
+                    for (Voice v : voiceList()) if (voice.equals(v.getName())) { chosen = v; break; }
+                }
+                if (chosen != null) {
+                    tts.setVoice(chosen);
+                } else {
+                    int r = tts.setLanguage(new Locale("ru", "RU"));
+                    if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) return false;
+                }
+                tts.setSpeechRate((float) Math.max(0.3, Math.min(3.0, rate)));
+                tts.setPitch((float) Math.max(0.3, Math.min(2.0, pitch)));
+                tts.stop();
+                int max = 3000, pos = 0, n = 0;
+                while (pos < text.length()) {
+                    int end = Math.min(text.length(), pos + max);
+                    if (end < text.length()) {
+                        int cut = Math.max(text.lastIndexOf(". ", end), text.lastIndexOf(' ', end));
+                        if (cut > pos + 200) end = cut + 1;
+                    }
+                    tts.speak(text.substring(pos, end), n == 0 ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD, null, "jarvis" + n);
+                    pos = end;
+                    n++;
+                }
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        @JavascriptInterface
+        public void stopSpeak() {
+            try { if (tts != null) tts.stop(); } catch (Exception ignored) { }
+        }
+
+        @JavascriptInterface
+        public boolean speaking() {
+            try { return tts != null && tts.isSpeaking(); } catch (Exception e) { return false; }
+        }
+
         @JavascriptInterface
         public String saveText(String name, String text) {
             try {

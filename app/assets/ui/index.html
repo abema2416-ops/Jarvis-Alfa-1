@@ -253,7 +253,16 @@ body.busy .orb .o-core,body.busy .orb .o-glow{animation-duration:.9s}
         <input type="number" id="sTemp" min="0" max="2" step="0.1">
         <label class="f" for="sHist">Сколько прошлых символов разговора помнить</label>
         <input type="number" id="sHist" min="1000" max="200000" step="1000">
-        <label class="chk"><input type="checkbox" id="sTts"> Озвучивать ответы голосом телефона</label>
+        <label class="chk"><input type="checkbox" id="sTts"> Озвучивать каждый ответ вслух</label>
+        <div class="only-app">
+        <label class="f" for="sVoice">Голос</label>
+        <select id="sVoice" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)"></select>
+        <label class="f" for="sRate">Скорость речи (1 — обычная)</label>
+        <input type="number" id="sRate" min="0.5" max="2" step="0.05">
+        <label class="f" for="sPitch">Высота голоса (меньше — ниже и солиднее)</label>
+        <input type="number" id="sPitch" min="0.5" max="1.5" step="0.05">
+        <div class="btns"><button class="btn" id="voiceTest">Проверить голос</button></div>
+        </div>
         <label class="chk"><input type="checkbox" id="sVib"> Короткая вибрация, когда ответ готов</label>
       </div>
       <div class="card">
@@ -308,7 +317,7 @@ body.busy .orb .o-core,body.busy .orb .o-glow{animation-duration:.9s}
 const DEF = {
   sys: 'Ты — Джарвис, личный помощник. Отвечай по-русски, точно и по делу, обращайся к пользователю «сэр». ' +
        'Если не знаешь ответа, скажи об этом прямо и не выдумывай.',
-  max: 1500, temp: 0.6, hist: 12000, top: 4, rounds: 2, url: '', model: '', lib: false, team: false, ctx: 8192, threads: 4, mode: 'std', auto: true, tts: false, vib: true
+  max: 1500, temp: 0.6, hist: 12000, top: 4, rounds: 2, url: '', model: '', lib: false, team: false, ctx: 8192, threads: 4, mode: 'std', auto: true, tts: false, vib: true, voice: '', rate: 1, pitch: 0.85
 };
 const LS = { get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
              set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} } };
@@ -325,7 +334,8 @@ const MODES = {
 };
 const sysPrompt = () => S.sys + (MODES[S.mode] && MODES[S.mode][1] ? '\n\n' + MODES[S.mode][1] : '');
 const ORB_BIG = '<svg class="orb big" width="132" height="132" viewBox="0 0 100 100" aria-hidden="true"><circle class="o-glow" cx="50" cy="50" r="30"/><circle class="o-r1" cx="50" cy="50" r="44" pathLength="100"/><circle class="o-r2" cx="50" cy="50" r="34" pathLength="100"/><circle class="o-r3" cx="50" cy="50" r="24" pathLength="100"/><circle class="o-core" cx="50" cy="50" r="11"/></svg>', ORB_SM = '<svg class="orb sm" width="22" height="22" viewBox="0 0 100 100" aria-hidden="true"><circle class="o-glow" cx="50" cy="50" r="30"/><circle class="o-r1" cx="50" cy="50" r="44" pathLength="100"/><circle class="o-r2" cx="50" cy="50" r="34" pathLength="100"/><circle class="o-r3" cx="50" cy="50" r="24" pathLength="100"/><circle class="o-core" cx="50" cy="50" r="11"/></svg>';
-const canSpeak = 'speechSynthesis' in window;
+const nat = () => (window.JarvisApp && window.JarvisApp.speak) ? window.JarvisApp : null;
+const canSpeak = !!nat() || 'speechSynthesis' in window;
 let autoTried = false;
 const gb = b => (b / 1073741824).toFixed(b < 10737418240 ? 1 : 0) + ' ГБ';
 const $ = id => document.getElementById(id);
@@ -372,7 +382,7 @@ function md(src){
 function msgHTML(m, i){
   if (m.role === 'user') return '<div class="msg user"><div class="bubble">' + esc(m.content) + '</div></div>';
   let h = '<div class="msg bot" data-i="' + i + '"><div class="tag"><b>' + esc(m.tag || 'Джарвис') + '</b>' + (m.stat ? '<span>' + esc(m.stat) + '</span>' : '') + '</div><div class="bubble' + (m.live && m.content ? ' live' : '') + '">';
-  if (m.think) h += '<details class="think"><summary>Рассуждения модели</summary><div>' + esc(m.think) + '</div></details>';
+  if (m.think) h += '<details class="think"><summary>Показать рассуждения</summary><div>' + esc(m.think) + '</div></details>';
   h += m.err ? '<span class="err">' + esc(m.content) + '</span>' : (md(m.content || '') || '<div class="thinking">' + ORB_SM + '<span>' + (m.think ? 'Рассуждаю…' : 'Думаю…') + '</span></div>');
   if (m.srcs && m.srcs.length) h += '<div class="srcs">Источники: ' + m.srcs.map((s, k) => '<span>[' + (k + 1) + '] ' + esc(s) + '</span>').join('') + '</div>';
   h += '</div>';
@@ -528,7 +538,7 @@ async function generate(messages, target){
   aborter = new AbortController();
   const t0 = performance.now(); let n = 0, tFirst = 0, tps = 0;
   const r = await api('/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), signal: aborter.signal });
-  const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '', last = 0;
+  const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '', last = 0, raw = '', rThink = '';
   for(;;){
     const { done, value } = await rd.read(); if (done) break;
     buf += dec.decode(value, { stream: true });
@@ -541,8 +551,9 @@ async function generate(messages, target){
       if (j.error) throw new Error(j.error.message || 'ошибка модели');
       const c = j.choices && j.choices[0] && j.choices[0].delta;
       if (c){
-        if (c.reasoning_content){ target.think = (target.think || '') + c.reasoning_content; }
-        if (c.content){ target.content += c.content; n++; if (!tFirst) tFirst = performance.now(); }
+        if (c.reasoning_content){ rThink += c.reasoning_content; }
+        if (c.content){ raw += c.content; n++; if (!tFirst) tFirst = performance.now(); }
+        const sp = splitThink(raw); target.content = sp.text; target.think = (rThink + (rThink && sp.think ? '\n' : '') + sp.think) || undefined;
       }
       if (j.timings && j.timings.predicted_per_second) tps = j.timings.predicted_per_second;
       const now = performance.now(); if (now - last > 90){ last = now; renderLast(); }
@@ -550,6 +561,12 @@ async function generate(messages, target){
   }
   if (!tps && n > 1 && tFirst) tps = (n - 1) / ((performance.now() - tFirst) / 1000);
   target.stat = (tps ? tps.toFixed(1) + ' ток/с · ' : '') + ((performance.now() - t0) / 1000).toFixed(0) + ' с';
+}
+function splitThink(raw){
+  const m = raw.match(/^\s*<(think|thinking|reasoning|thought)>([\s\S]*?)(?:<\/\1>|$)/i);
+  if (!m) return { text: raw, think: '' };
+  const closed = new RegExp('</' + m[1] + '>', 'i').test(m[0]);
+  return { text: closed ? raw.slice(m[0].length).replace(/^\s+/, '') : '', think: m[2].trim() };
 }
 function history(){
   const out = []; let left = +S.hist || 12000;
@@ -625,10 +642,11 @@ async function team(task, sys, srcs){
 }
 function speak(text){
   if (!canSpeak) return;
-  const sy = window.speechSynthesis;
-  if (sy.speaking){ sy.cancel(); return; }
+  const N = nat(), sy = window.speechSynthesis;
+  if (N ? N.speaking() : sy.speaking){ if (N) N.stopSpeak(); else sy.cancel(); return; }
   const clean = text.replace(/```[\s\S]*?```/g, ' Здесь код. ').replace(/[#*`_>|]/g, ' ').replace(/\[(\d+)\]/g, '').replace(/\s+/g, ' ').trim();
   if (!clean) return;
+  if (N){ if (!N.speak(clean, S.voice || '', +S.rate || 1, +S.pitch || 0.85)) toast('Голос недоступен: установите в телефоне русский голос синтеза речи'); return; }
   const u = new SpeechSynthesisUtterance(clean.slice(0, 4000)); u.lang = 'ru-RU'; u.rate = 1.02; u.pitch = 0.85;
   const v = sy.getVoices().filter(x => /^ru/i.test(x.lang)); if (v.length) u.voice = v.find(x => /male|муж/i.test(x.name)) || v[0];
   sy.speak(u);
@@ -766,6 +784,7 @@ document.querySelector('nav').addEventListener('click', e => {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + b.dataset.v));
   if (b.dataset.v === 'lib') renderDocs();
+  if (b.dataset.v === 'set') fillVoices();
 });
 const inp = $('inp');
 inp.addEventListener('input', () => { inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, innerHeight * 0.38) + 'px'; });
@@ -822,12 +841,20 @@ $('expBtn').onclick = async () => {
 };
 $('docs').addEventListener('click', async e => { const b = e.target.closest('[data-del]'); if (b && confirm('Удалить из библиотеки?')){ await Lib.remove(+b.dataset.del); renderDocs(); doSearch(); } });
 $('q').addEventListener('input', () => { clearTimeout(doSearch.t); doSearch.t = setTimeout(doSearch, 250); });
-function fillSet(){ $('sAuto').checked = !!S.auto; $('sTts').checked = !!S.tts; $('sVib').checked = !!S.vib; $('sCtx').value = S.ctx; $('sThr').value = S.threads; $('sSys').value = S.sys; $('sMax').value = S.max; $('sTemp').value = S.temp; $('sHist').value = S.hist; $('sTop').value = S.top; $('sRounds').value = S.rounds; $('sUrl').value = S.url; }
+function fillVoices(){
+  const N = nat(), sel = $('sVoice'); if (!N || !sel) return;
+  let vs = []; try{ vs = JSON.parse(N.voices() || '[]'); }catch(e){}
+  sel.innerHTML = '<option value="">Автоматически (русский)</option>' + vs.map(v => '<option value="' + esc(v.name) + '">' + esc(v.label) + '</option>').join('');
+  sel.value = vs.some(v => v.name === S.voice) ? S.voice : '';
+}
+function readVoice(){ S.voice = $('sVoice').value; S.rate = +$('sRate').value || 1; S.pitch = +$('sPitch').value || 0.85; }
+$('voiceTest').onclick = () => { readVoice(); saveSet(); const N = nat(); if (N){ N.stopSpeak(); if (!N.speak('К вашим услугам, сэр. Все системы работают нормально.', S.voice, S.rate, S.pitch)) toast('Голос недоступен: установите в телефоне русский голос синтеза речи'); } };
+function fillSet(){ fillVoices(); $('sRate').value = S.rate; $('sPitch').value = S.pitch; $('sAuto').checked = !!S.auto; $('sTts').checked = !!S.tts; $('sVib').checked = !!S.vib; $('sCtx').value = S.ctx; $('sThr').value = S.threads; $('sSys').value = S.sys; $('sMax').value = S.max; $('sTemp').value = S.temp; $('sHist').value = S.hist; $('sTop').value = S.top; $('sRounds').value = S.rounds; $('sUrl').value = S.url; }
 $('saveBtn').onclick = () => {
   S.sys = $('sSys').value.trim() || DEF.sys; S.max = +$('sMax').value || DEF.max; S.temp = isNaN(+$('sTemp').value) ? DEF.temp : +$('sTemp').value;
   S.hist = +$('sHist').value || DEF.hist; S.top = +$('sTop').value || DEF.top; S.rounds = +$('sRounds').value || DEF.rounds; S.url = $('sUrl').value.trim();
   S.ctx = +$('sCtx').value || DEF.ctx; S.threads = +$('sThr').value || DEF.threads;
-  S.auto = $('sAuto').checked; S.tts = $('sTts').checked; S.vib = $('sVib').checked;
+  S.auto = $('sAuto').checked; S.tts = $('sTts').checked; S.vib = $('sVib').checked; readVoice();
   saveSet(); fillSet(); toast('Сохранено'); loadModels();
 };
 $('saveBtn2').onclick = () => $('saveBtn').click();
