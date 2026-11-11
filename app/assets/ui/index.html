@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<meta name="theme-color" content="#0e1116">
+<meta name="theme-color" content="#070b12">
 <title>Джарвис-1 Альфа</title>
 <style>
 :root{
@@ -124,11 +124,73 @@ pre.log{background:var(--code);border:1px solid var(--line);border-radius:10px;p
 .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:999px;
   font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
+
+/* ===== версия 0.3: новый вид ===== */
+:root{ --bg:#070b12; --panel:#0e1520; --panel2:#152030; --line:#1f2d40; --text:#e8eef6; --dim:#8a9ab0;
+  --accent:#ffb347; --accent2:#4fd8ff; --accent-ink:#1a1003; --user:#16304a; --code:#060a10; --radius:18px;
+  --glow:0 0 24px rgba(255,179,71,.28) }
+@media (prefers-color-scheme: light){
+  :root{ --bg:#eef2f7; --panel:#ffffff; --panel2:#e6ecf4; --line:#cfd8e4; --text:#101822; --dim:#566579;
+    --accent:#c26a00; --accent2:#0077a8; --accent-ink:#ffffff; --user:#d6e6f8; --code:#edf1f6; --glow:0 0 18px rgba(194,106,0,.18) }
+}
+body{background:
+  radial-gradient(120% 60% at 50% -10%, color-mix(in srgb,var(--accent2) 14%,transparent), transparent 60%),
+  radial-gradient(90% 50% at 100% 110%, color-mix(in srgb,var(--accent) 10%,transparent), transparent 60%), var(--bg)}
+header{background:color-mix(in srgb,var(--panel) 72%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom-color:transparent}
+.brand{display:flex;align-items:center;gap:8px;font-size:17px}
+.brand small{margin-left:0;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:2px 7px;border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);border-radius:999px}
+.model-btn{background:color-mix(in srgb,var(--panel2) 80%,transparent);transition:transform .12s,border-color .2s}
+.model-btn:active,.btn:active,.chip:active,.send:active{transform:scale(.96)}
+.dot.ok{box-shadow:0 0 10px var(--ok)} .dot.wait{animation:blink 1s infinite}
+nav{background:transparent;border-bottom:0;padding:6px 12px 8px;gap:6px}
+nav button{border-radius:999px;border:1px solid transparent;padding:8px 4px;transition:background .2s,color .2s}
+nav button.on{background:var(--panel2);border-color:var(--line);border-bottom-color:var(--line);color:var(--text)}
+.bubble{background:color-mix(in srgb,var(--panel) 88%,transparent);border-radius:6px var(--radius) var(--radius) var(--radius)}
+.msg.user .bubble{border-radius:var(--radius) var(--radius) 6px var(--radius);background:linear-gradient(135deg,var(--user),color-mix(in srgb,var(--user) 70%,var(--accent2)))}
+.msg.new{animation:rise .22s ease-out both}
+.bubble.live::after{content:"";display:inline-block;width:8px;height:1.05em;margin-left:3px;vertical-align:-2px;background:var(--accent);border-radius:2px;animation:blink .9s steps(2) infinite}
+.thinking{display:flex;align-items:center;gap:10px;color:var(--dim)}
+.composer{background:color-mix(in srgb,var(--panel) 80%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top-color:transparent}
+textarea#inp{border-radius:22px;padding:11px 16px;background:var(--panel2);border-color:transparent}
+.send{border-radius:50%;width:46px;height:46px;min-width:46px;padding:0;box-shadow:var(--glow);transition:transform .12s,background .2s}
+.chip{transition:background .2s,color .2s,transform .12s}
+.chip.on{box-shadow:var(--glow)}
+.card{background:color-mix(in srgb,var(--panel) 90%,transparent)}
+.btn{transition:transform .12s,background .2s} .btn.pri{box-shadow:var(--glow)}
+.sheet{backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.sheet.on .box{animation:slideUp .26s cubic-bezier(.2,.8,.2,1) both}
+.sheet .box{border:1px solid var(--line);border-bottom:0}
+.empty{margin-top:6vh}
+.empty h2{font-size:22px;margin-top:10px}
+.hero{display:grid;place-items:center;margin:0 auto 4px}
+.sugs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:18px}
+.sugs button{padding:9px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--text);font-size:14px;animation:rise .3s ease-out both}
+.sugs button:nth-child(2){animation-delay:.05s}.sugs button:nth-child(3){animation-delay:.1s}.sugs button:nth-child(4){animation-delay:.15s}
+.fab{position:fixed;right:16px;bottom:150px;width:42px;height:42px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+  display:none;place-items:center;font-size:18px;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.fab.on{display:grid;animation:rise .2s ease-out both}
+label.chk{display:flex;gap:10px;align-items:center;margin-top:12px;color:var(--text)}
+label.chk input{width:20px;height:20px;accent-color:var(--accent)}
+.orb{overflow:visible}
+.orb circle{fill:none;transform-origin:50px 50px}
+.orb .o-glow{fill:color-mix(in srgb,var(--accent) 22%,transparent);filter:blur(10px);animation:pulse 3.2s ease-in-out infinite}
+.orb .o-r1{stroke:var(--accent);stroke-width:3;stroke-dasharray:62 38;stroke-linecap:round;animation:spin 9s linear infinite}
+.orb .o-r2{stroke:var(--accent2);stroke-width:2;stroke-dasharray:18 7;opacity:.75;animation:spin 14s linear infinite reverse}
+.orb .o-r3{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:40 60;opacity:.8;animation:spin 6s linear infinite}
+.orb .o-core{fill:var(--accent);animation:pulse 3.2s ease-in-out infinite}
+body.busy .orb .o-r1{animation-duration:1.6s} body.busy .orb .o-r2{animation-duration:2.4s} body.busy .orb .o-r3{animation-duration:1.1s}
+body.busy .orb .o-core,body.busy .orb .o-glow{animation-duration:.9s}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:.75;transform:scale(.92)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes blink{50%{opacity:.25}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes slideUp{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){ *,*::before,*::after{animation:none!important;transition:none!important} }
 </style>
 </head>
 <body>
 <header>
-  <div class="brand">Джарвис-1<small>Альфа</small></div>
+  <div class="brand"><svg class="orb mini" width="26" height="26" viewBox="0 0 100 100" aria-hidden="true"><circle class="o-glow" cx="50" cy="50" r="30"/><circle class="o-r1" cx="50" cy="50" r="44" pathLength="100"/><circle class="o-r2" cx="50" cy="50" r="34" pathLength="100"/><circle class="o-r3" cx="50" cy="50" r="24" pathLength="100"/><circle class="o-core" cx="50" cy="50" r="11"/></svg><span>Джарвис-1</span><small>Альфа</small></div>
   <button class="model-btn" id="modelBtn" aria-label="Выбор модели"><i class="dot" id="dot"></i><span class="name" id="modelName">нет связи</span></button>
 </header>
 <nav>
@@ -191,6 +253,8 @@ pre.log{background:var(--code);border:1px solid var(--line);border-radius:10px;p
         <input type="number" id="sTemp" min="0" max="2" step="0.1">
         <label class="f" for="sHist">Сколько прошлых символов разговора помнить</label>
         <input type="number" id="sHist" min="1000" max="200000" step="1000">
+        <label class="chk"><input type="checkbox" id="sTts"> Озвучивать ответы голосом телефона</label>
+        <label class="chk"><input type="checkbox" id="sVib"> Короткая вибрация, когда ответ готов</label>
       </div>
       <div class="card">
         <h3>Библиотека и три роли</h3>
@@ -207,6 +271,7 @@ pre.log{background:var(--code);border:1px solid var(--line);border-radius:10px;p
         <label class="f" for="sThr">Потоки процессора (обычно 4; на новых флагманах можно 6)</label>
         <input type="number" id="sThr" min="1" max="16" step="1">
         <div class="muted" style="margin-top:8px">Изменения применяются при следующем запуске модели.</div>
+        <label class="chk"><input type="checkbox" id="sAuto"> Запускать последнюю модель при открытии</label>
         <div class="btns"><button class="btn pri" id="saveBtn2">Сохранить</button></div>
       </div>
       <div class="card only-web">
@@ -234,6 +299,7 @@ pre.log{background:var(--code);border:1px solid var(--line);border-radius:10px;p
   <pre class="log" id="logBox" hidden></pre>
   <div class="btns"><button class="btn" id="refreshBtn">Обновить список</button><button class="btn" id="logBtn">Журнал</button><button class="btn" id="closeSheet">Закрыть</button></div>
 </div></div>
+<button class="fab" id="fab" aria-label="Вниз">↓</button>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -242,7 +308,7 @@ pre.log{background:var(--code);border:1px solid var(--line);border-radius:10px;p
 const DEF = {
   sys: 'Ты — Джарвис, личный помощник. Отвечай по-русски, точно и по делу, обращайся к пользователю «сэр». ' +
        'Если не знаешь ответа, скажи об этом прямо и не выдумывай.',
-  max: 1500, temp: 0.6, hist: 12000, top: 4, rounds: 2, url: '', model: '', lib: false, team: false, ctx: 8192, threads: 4, mode: 'std'
+  max: 1500, temp: 0.6, hist: 12000, top: 4, rounds: 2, url: '', model: '', lib: false, team: false, ctx: 8192, threads: 4, mode: 'std', auto: true, tts: false, vib: true
 };
 const LS = { get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
              set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} } };
@@ -258,6 +324,9 @@ const MODES = {
   idea:  ['Идеи', 'Сейчас ты генератор идей. Предлагай несколько разных вариантов списком и отмечай, какой считаешь лучшим и почему.']
 };
 const sysPrompt = () => S.sys + (MODES[S.mode] && MODES[S.mode][1] ? '\n\n' + MODES[S.mode][1] : '');
+const ORB_BIG = '<svg class="orb big" width="132" height="132" viewBox="0 0 100 100" aria-hidden="true"><circle class="o-glow" cx="50" cy="50" r="30"/><circle class="o-r1" cx="50" cy="50" r="44" pathLength="100"/><circle class="o-r2" cx="50" cy="50" r="34" pathLength="100"/><circle class="o-r3" cx="50" cy="50" r="24" pathLength="100"/><circle class="o-core" cx="50" cy="50" r="11"/></svg>', ORB_SM = '<svg class="orb sm" width="22" height="22" viewBox="0 0 100 100" aria-hidden="true"><circle class="o-glow" cx="50" cy="50" r="30"/><circle class="o-r1" cx="50" cy="50" r="44" pathLength="100"/><circle class="o-r2" cx="50" cy="50" r="34" pathLength="100"/><circle class="o-r3" cx="50" cy="50" r="24" pathLength="100"/><circle class="o-core" cx="50" cy="50" r="11"/></svg>';
+const canSpeak = 'speechSynthesis' in window;
+let autoTried = false;
 const gb = b => (b / 1073741824).toFixed(b < 10737418240 ? 1 : 0) + ' ГБ';
 const $ = id => document.getElementById(id);
 const base = () => (S.url || '').replace(/\/+$/, '');
@@ -302,12 +371,13 @@ function md(src){
 /* ---------- чат: отрисовка ---------- */
 function msgHTML(m, i){
   if (m.role === 'user') return '<div class="msg user"><div class="bubble">' + esc(m.content) + '</div></div>';
-  let h = '<div class="msg bot" data-i="' + i + '"><div class="tag"><b>' + esc(m.tag || 'Джарвис') + '</b>' + (m.stat ? '<span>' + esc(m.stat) + '</span>' : '') + '</div><div class="bubble">';
+  let h = '<div class="msg bot" data-i="' + i + '"><div class="tag"><b>' + esc(m.tag || 'Джарвис') + '</b>' + (m.stat ? '<span>' + esc(m.stat) + '</span>' : '') + '</div><div class="bubble' + (m.live && m.content ? ' live' : '') + '">';
   if (m.think) h += '<details class="think"><summary>Рассуждения модели</summary><div>' + esc(m.think) + '</div></details>';
-  h += m.err ? '<span class="err">' + esc(m.content) + '</span>' : (md(m.content || '') || '<span class="muted">…</span>');
+  h += m.err ? '<span class="err">' + esc(m.content) + '</span>' : (md(m.content || '') || '<div class="thinking">' + ORB_SM + '<span>' + (m.think ? 'Рассуждаю…' : 'Думаю…') + '</span></div>');
   if (m.srcs && m.srcs.length) h += '<div class="srcs">Источники: ' + m.srcs.map((s, k) => '<span>[' + (k + 1) + '] ' + esc(s) + '</span>').join('') + '</div>';
   h += '</div>';
-  if (!m.live && !m.err && m.content) h += '<div class="acts"><button data-act="copy">Копировать</button><button data-act="note">В заметки</button></div>';
+  if (!m.live && !m.err && m.content) h += '<div class="acts"><button data-act="copy">Копировать</button><button data-act="note">В заметки</button>' +
+    (canSpeak ? '<button data-act="say">Озвучить</button>' : '') + (i === msgs.length - 1 && m.ctx !== false ? '<button data-act="again">Ещё раз</button>' : '') + '</div>';
   return h + '</div>';
 }
 function renderChat(){
@@ -321,8 +391,10 @@ function renderChat(){
 }
 function emptyHTML(){
   const cur = models.find(m => m.id === S.model), ready = cur && mState(cur) === 'loaded';
-  let h = '<div class="empty"><h2>К вашим услугам, сэр</h2>';
-  if (ready) return h + '<div>Модель в памяти. Задайте вопрос — всё работает на этом телефоне, без интернета.</div></div>';
+  let h = '<div class="empty"><div class="hero">' + ORB_BIG + '</div><h2>К вашим услугам, сэр</h2>';
+  if (ready) return h + '<div>Модель в памяти. Всё работает на этом телефоне, без интернета.</div><div class="sugs">' +
+    ['Объясни простыми словами, как работает нейросеть', 'Напиши программу «угадай число» на Python', 'Придумай три идеи для школьного проекта', 'Составь план подготовки к контрольной']
+      .map(t => '<button data-fill="' + esc(t) + '">' + esc(t) + '</button>').join('') + '</div></div>';
   if (!appMode) return h + '<div>Выберите модель вверху и задайте вопрос. Всё работает на этом телефоне, без интернета.</div></div>';
   const s1 = !!app.perm, s2 = s1 && models.length > 0, s3 = s2 && cur && mState(cur) !== 'unloaded';
   const li = (done, cur, t) => '<li class="' + (done ? 'done' : cur ? 'cur' : '') + '"><div>' + t + '</div></li>';
@@ -340,7 +412,7 @@ function renderLast(){
     const open = node.querySelector('details.think') && node.querySelector('details.think').open;
     node.replaceWith(tmp.firstChild);
     if (open){ const d = el.querySelector('.msg[data-i="' + i + '"] details.think'); if (d) d.open = true; }
-  } else { if (el.querySelector('.empty')) el.innerHTML = ''; el.appendChild(tmp.firstChild); }
+  } else { if (el.querySelector('.empty')) el.innerHTML = ''; tmp.firstChild.classList.add('new'); el.appendChild(tmp.firstChild); }
   scrollDown(false);
 }
 function scrollDown(force){
@@ -369,6 +441,8 @@ async function loadModels(reload){
       models = (j.models || []).map(m => { const mine = st.model === m.name;
         return { id: m.name, size: m.size, status: { value: mine && st.state === 'running' ? (ready ? 'loaded' : 'loading') : 'unloaded' }, failed: mine && st.state === 'failed' }; });
       if (!S.model || !models.some(m => m.id === S.model)){ S.model = models.some(m => m.id === st.model) ? st.model : (models[0] ? models[0].id : ''); saveSet(); }
+      if (!autoTried){ autoTried = true; const am = models.find(m => m.id === S.model);
+        if (S.auto && st.state === 'stopped' && am && LS.get('jarvis.ran', '') === am.id) setTimeout(() => useModel(am.id), 300); }
     } else {
       appMode = false;
       const j = await (await api('/models' + (reload ? '?reload=1' : ''))).json();
@@ -422,14 +496,14 @@ async function useModel(id){
     try{
       if (appMode) await api('/app/start?name=' + encodeURIComponent(id) + '&ctx=' + (+S.ctx || 8192) + '&threads=' + (+S.threads || 4));
       else await api('/models/load', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model: id }) });
-      toast('Загружаю модель в память');
+      toast('Загружаю модель в память'); LS.set('jarvis.ran', id);
     }catch(e){ toast('Не удалось запустить: ' + e.message); }
     await loadModels(); pollModels();
   } else { setHead(online); renderModels(); $('sheet').classList.remove('on'); }
 }
 async function unloadModel(id){
   try{
-    if (appMode) await api('/app/stop');
+    if (appMode){ await api('/app/stop'); LS.set('jarvis.ran', ''); }
     else await api('/models/unload', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model: id }) });
   }catch(e){ toast(e.message); }
   setTimeout(loadModels, 600);
@@ -518,6 +592,12 @@ async function ask(text){
     else { const m = await runStep('Джарвис', [{ role:'system', content: sys }].concat(history()), true); m.srcs = srcs; renderLast(); saveChat(); }
   }catch(e){ /* уже показано */ }
   busy = false; aborter = null; setBusy(false);
+  const lm = msgs[msgs.length - 1];
+  if (lm && lm.role === 'assistant' && !lm.err){
+    if (S.vib && navigator.vibrate){ try{ navigator.vibrate(18); }catch(e){} }
+    if (S.tts) speak(lm.content);
+  }
+  renderChat();
 }
 /* три роли: архитектор -> программист -> проверяющий, по кругу */
 async function team(task, sys, srcs){
@@ -543,7 +623,23 @@ async function team(task, sys, srcs){
   }
   work.ctx = true; saveChat();   // в память разговора идёт только итог
 }
+function speak(text){
+  if (!canSpeak) return;
+  const sy = window.speechSynthesis;
+  if (sy.speaking){ sy.cancel(); return; }
+  const clean = text.replace(/```[\s\S]*?```/g, ' Здесь код. ').replace(/[#*`_>|]/g, ' ').replace(/\[(\d+)\]/g, '').replace(/\s+/g, ' ').trim();
+  if (!clean) return;
+  const u = new SpeechSynthesisUtterance(clean.slice(0, 4000)); u.lang = 'ru-RU'; u.rate = 1.02; u.pitch = 0.85;
+  const v = sy.getVoices().filter(x => /^ru/i.test(x.lang)); if (v.length) u.voice = v.find(x => /male|муж/i.test(x.name)) || v[0];
+  sy.speak(u);
+}
+function again(){
+  if (busy) return;
+  let i = msgs.length - 1; while (i >= 0 && msgs[i].role !== 'user') i--;
+  if (i < 0) return; const t = msgs[i].content; msgs = msgs.slice(0, i); saveChat(); renderChat(); ask(t);
+}
 function setBusy(b){
+  document.body.classList.toggle('busy', b);
   const s = $('send'); s.classList.toggle('stop', b); s.textContent = b ? '■' : '➤'; s.setAttribute('aria-label', b ? 'Остановить' : 'Отправить');
 }
 
@@ -684,7 +780,10 @@ $('send').addEventListener('click', () => {
 function chips(){ $('chipLib').classList.toggle('on', !!S.lib); $('chipTeam').classList.toggle('on', !!S.team); $('mode').value = MODES[S.mode] ? S.mode : 'std'; }
 $('mode').innerHTML = Object.keys(MODES).map(k => '<option value="' + k + '">' + MODES[k][0] + '</option>').join('');
 $('mode').onchange = e => { S.mode = e.target.value; saveSet(); toast('Режим: ' + MODES[S.mode][0]); };
-document.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) go(g.dataset.go); });
+document.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) go(g.dataset.go);
+  const f = e.target.closest('[data-fill]'); if (f){ inp.value = f.dataset.fill; inp.dispatchEvent(new Event('input')); $('send').click(); } });
+$('chatScroll').addEventListener('scroll', () => { const sc = $('chatScroll'); $('fab').classList.toggle('on', sc.scrollHeight - sc.scrollTop - sc.clientHeight > 320); });
+$('fab').onclick = () => { const sc = $('chatScroll'); sc.scrollTo({ top: sc.scrollHeight, behavior: 'smooth' }); };
 $('logBtn').onclick = () => { const lb = $('logBox'); lb.hidden = !lb.hidden; renderModels(); };
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadModels(true); });
 $('chipLib').onclick = () => { S.lib = !S.lib; saveSet(); chips(); };
@@ -696,6 +795,8 @@ $('chat').addEventListener('click', e => {
   const a = e.target.closest('[data-act]'); if (!a) return;
   const m = msgs[+a.closest('.msg').dataset.i]; if (!m) return;
   if (a.dataset.act === 'copy') copy(m.content);
+  if (a.dataset.act === 'say') speak(m.content);
+  if (a.dataset.act === 'again') again();
   if (a.dataset.act === 'note') saveNote('Заметка ' + new Date().toLocaleString('ru-RU'), m.content);
 });
 function copy(t){
@@ -721,11 +822,12 @@ $('expBtn').onclick = async () => {
 };
 $('docs').addEventListener('click', async e => { const b = e.target.closest('[data-del]'); if (b && confirm('Удалить из библиотеки?')){ await Lib.remove(+b.dataset.del); renderDocs(); doSearch(); } });
 $('q').addEventListener('input', () => { clearTimeout(doSearch.t); doSearch.t = setTimeout(doSearch, 250); });
-function fillSet(){ $('sCtx').value = S.ctx; $('sThr').value = S.threads; $('sSys').value = S.sys; $('sMax').value = S.max; $('sTemp').value = S.temp; $('sHist').value = S.hist; $('sTop').value = S.top; $('sRounds').value = S.rounds; $('sUrl').value = S.url; }
+function fillSet(){ $('sAuto').checked = !!S.auto; $('sTts').checked = !!S.tts; $('sVib').checked = !!S.vib; $('sCtx').value = S.ctx; $('sThr').value = S.threads; $('sSys').value = S.sys; $('sMax').value = S.max; $('sTemp').value = S.temp; $('sHist').value = S.hist; $('sTop').value = S.top; $('sRounds').value = S.rounds; $('sUrl').value = S.url; }
 $('saveBtn').onclick = () => {
   S.sys = $('sSys').value.trim() || DEF.sys; S.max = +$('sMax').value || DEF.max; S.temp = isNaN(+$('sTemp').value) ? DEF.temp : +$('sTemp').value;
   S.hist = +$('sHist').value || DEF.hist; S.top = +$('sTop').value || DEF.top; S.rounds = +$('sRounds').value || DEF.rounds; S.url = $('sUrl').value.trim();
   S.ctx = +$('sCtx').value || DEF.ctx; S.threads = +$('sThr').value || DEF.threads;
+  S.auto = $('sAuto').checked; S.tts = $('sTts').checked; S.vib = $('sVib').checked;
   saveSet(); fillSet(); toast('Сохранено'); loadModels();
 };
 $('saveBtn2').onclick = () => $('saveBtn').click();

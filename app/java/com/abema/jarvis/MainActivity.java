@@ -51,7 +51,10 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         engine = Engine.get(this);
+        getWindow().setStatusBarColor(0xFF070B12);
+        getWindow().setNavigationBarColor(0xFF070B12);
         web = new WebView(this);
+        web.setBackgroundColor(0xFF070B12);
         setContentView(web);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
