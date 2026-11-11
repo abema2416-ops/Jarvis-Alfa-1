@@ -1,0 +1,24 @@
+status: 0
+release: опубликован
+run: 5
+commit: 110f481f53d21afa1f78e7bc33fcc2f1de77c38d
+Wed Nov 11 20:59:31 UTC 2026
+---- строки с ошибками ----
+---- конец журнала ----
+== SDK: /usr/local/lib/android/sdk
+== NDK: /usr/local/lib/android/sdk/ndk/30.0.16248370
+== build-tools: /usr/local/lib/android/sdk/build-tools/37.0.0
+== platform: /usr/local/lib/android/sdk/platforms/android-34/android.jar
+== Движок взят из кэша
+-rwxr-xr-x 1 runner runner 11427592 Nov 11 19:26 /home/runner/work/Jarvis-Alfa-1/Jarvis-Alfa-1/engine-cache/libllama_server.so
+/home/runner/work/Jarvis-Alfa-1/Jarvis-Alfa-1/engine-cache/libllama_server.so: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /system/bin/linker64, for Android 28, built by NDK r30 (16248370), BuildID[sha1]=1aafa3ef578b865fee33262bd780296a190a3706, stripped
+Note: /home/runner/work/Jarvis-Alfa-1/Jarvis-Alfa-1/app/java/com/abema/jarvis/MainActivity.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+-rw-r--r-- 1 runner runner 5079705 Nov 11 20:59 /home/runner/work/Jarvis-Alfa-1/Jarvis-Alfa-1/build/Jarvis.apk
+== ГОТОВО: /home/runner/work/Jarvis-Alfa-1/Jarvis-Alfa-1/build/Jarvis.apk
+https://github.com/abema2416-ops/Jarvis-Alfa-1/releases/tag/latest
